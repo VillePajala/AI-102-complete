@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+pydantic-settings
+httpx
+openai
+azure-cognitiveservices-vision-computervision
+azure-ai-textanalytics
+azure-search-documents
+azure-ai-formrecognizer
+# azure-cognitiveservices-speech  # Needs special install - see https://learn.microsoft.com/en-us/azure/cognitive-services/speech-service/quickstarts/setup-platform
+azure-ai-contentsafety

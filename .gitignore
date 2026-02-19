@@ -1,0 +1,56 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Environment variables (NEVER commit Azure keys)
+.env
+.env.local
+.env.production
+backend/.env
+
+# Next.js
+.next/
+out/
+
+# Python virtual environment
+backend/venv/
+backend/.venv/
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data files (large/binary)
+data/images/*.jpg
+data/images/*.png
+data/documents/*.pdf
+data/audio/*.wav
+data/audio/*.mp3
+!data/images/.gitkeep
+!data/documents/.gitkeep
+!data/audio/.gitkeep
+
+# SQLite
+*.db
+*.sqlite3
+
+# Logs
+*.log
+npm-debug.log*
+
+# Claude
+.claude/
