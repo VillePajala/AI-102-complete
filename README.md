@@ -123,6 +123,73 @@ AI-102-complete/                ← repo root = Next.js root
 
 **Why Next.js is at root:** v0.app requires `package.json` at the repository root to properly import and run the project in its sandbox.
 
+## Roadmap
+
+### Phase 1: Foundation (CURRENT)
+- [x] Project scaffolding (Next.js + FastAPI + folder structure)
+- [x] Exam topics documentation with all 6 domains mapped
+- [x] CLAUDE.md with full architecture and workflow reference
+- [x] GitHub repo + v0 connected
+- [ ] Frontend UI built in v0 (dashboard, sidebar, all module pages)
+- [ ] Refine and merge v0 frontend PR
+
+### Phase 2: Core AI Modules
+Build the highest-weight exam modules first. For each module: study the Azure service → provision in Azure → build Python backend → wire to UI → test.
+
+- [ ] **GenAI Lab** (Domain 2) — Azure OpenAI chat, prompt engineering, DALL-E, parameter tuning
+  - Provision: Azure OpenAI resource + deploy GPT model
+  - Backend: `backend/app/services/openai_service.py`, chat completions, image generation
+  - Wire: connect chat UI and parameter panel to backend
+- [ ] **RAG Engine** (Domain 2+6) — Document upload, indexing, grounded chat with citations
+  - Provision: Azure AI Search + embedding model deployment
+  - Backend: document chunking, embedding generation, index management, grounded chat
+  - Wire: upload flow, search results, citation display
+- [ ] **Knowledge Mining** (Domain 6) — Search indexes, skillsets, Document Intelligence
+  - Provision: Azure AI Search (reuse from RAG) + Document Intelligence resource
+  - Backend: index CRUD, skillset configuration, document extraction
+  - Wire: index viewer, query explorer, document analysis results
+
+### Phase 3: Specialized Service Modules
+- [ ] **Vision Lab** (Domain 4) — Image analysis, OCR, Custom Vision
+  - Provision: Azure AI Vision resource + Custom Vision resource
+  - Backend: image analysis, OCR, custom model training/prediction
+  - Wire: image upload, bounding box overlay, OCR results
+- [ ] **Language & Speech** (Domain 5) — Text analytics, translation, STT/TTS
+  - Provision: Azure AI Language + Speech + Translator resources
+  - Backend: sentiment, entities, PII, translation, speech processing
+  - Wire: text analysis results, audio recording/playback
+- [ ] **Agent Workshop** (Domain 3) — AI agents with Foundry Agent Service
+  - Provision: Foundry Agent Service setup
+  - Backend: agent creation, tool configuration, conversation handling
+  - Wire: agent config panel, chat with tool-use visibility
+
+### Phase 4: Governance and Cross-Cutting
+- [ ] **Responsible AI** (Domain 1) — Content Safety, prompt shields, blocklists
+  - Provision: Azure Content Safety resource
+  - Backend: text/image safety analysis, prompt shield check, blocklist CRUD
+  - Wire: content tester, governance checklist
+- [ ] **Foundry Hub** (Domain 1) — Resource status dashboard, provisioning guide
+  - Backend: health checks for all connected services
+  - Wire: service status indicators, configuration panel
+
+### Phase 5: Study Features
+- [ ] **Progress tracker** — Domain completion percentages, module status, exam readiness score
+- [ ] **Resources page** — Curated links by domain, personal notes with localStorage persistence
+- [ ] **Quiz mode** — AI-generated questions from study docs (powered by RAG Engine)
+- [ ] **Flashcards** — Key concept cards per domain
+
+### Phase 6: Shareability
+Make the project usable by anyone studying for AI-102.
+
+- [ ] **BYOK (Bring Your Own Keys)** — Settings page in UI where users enter their own Azure keys. Keys stored in browser localStorage, passed to backend per-request. No shared credentials needed.
+- [ ] **Demo mode** — Mock/simulated responses for all modules so users can explore without Azure keys
+- [ ] **Azure provisioning guide** — Step-by-step instructions with free tier info for each service
+- [ ] **Docker Compose** — Single `docker compose up` to run frontend + backend locally
+- [ ] **Vercel deployment** — One-click deploy button for frontend, backend deploy guide
+- [ ] **Contributing guide** — How others can add features or improve the project
+
+---
+
 ## Study Reference
 
 See `docs/exam-topics.md` for the complete AI-102 exam objectives (6 domains, all subtopics), domain weights, platform naming transition guide, and curated MS Learn links.

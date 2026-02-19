@@ -322,6 +322,53 @@ Note: SDK package names still use older naming conventions. This is expected and
 
 ---
 
+## Roadmap and Current Phase
+
+The full roadmap with all phases is in **README.md → Roadmap section**. Always check it before starting work.
+
+**Current phase: Phase 1 (Foundation)** — Frontend UI is being built in v0. Backend has stub routers. No Azure services connected yet.
+
+**Build order for modules:** GenAI Lab → RAG Engine → Knowledge Mining → Vision Lab → Language & Speech → Agent Workshop → Responsible AI → Foundry Hub
+
+**After core modules:** Study features (progress, quiz, flashcards), then shareability features (BYOK settings page, demo mode, Docker Compose, deployment).
+
+---
+
+## CI/CD Pipeline
+
+Two workflow files in `.github/workflows/`:
+
+### `ci.yml` — Runs on every PR and push to main
+
+| Check | What It Does |
+|-------|-------------|
+| **Frontend Build** | `next build` — verifies the app compiles |
+| **Frontend TypeScript** | `tsc --noEmit` — catches type errors |
+| **Frontend Lint** | `next lint` — ESLint rules |
+| **Backend Lint** | `ruff check` + `ruff format --check` — Python linting and formatting |
+| **Backend Type Check** | `mypy` — Python type checking |
+| **Backend Import Check** | Verifies FastAPI app imports without errors |
+| **Secrets Scan** | TruffleHog — scans for accidentally committed secrets |
+| **Dependency Audit** | `npm audit` + `pip-audit` — known vulnerabilities |
+| **No .env Files** | Fails if any .env file is committed |
+| **No Hardcoded Keys** | Regex scan for Azure key patterns in source files |
+
+### `claude.yml` — Claude AI reviews on PRs
+
+| Check | What It Does |
+|-------|-------------|
+| **Code Review** | Claude reviews every PR for bugs, quality, security, and architecture consistency |
+| **Security Review** | Dedicated security vulnerability scan on PR diffs |
+| **Interactive** | Type `@claude` in any PR/issue comment to ask Claude questions or request changes |
+
+**Required secret:** `ANTHROPIC_API_KEY` must be set in GitHub repo settings → Secrets → Actions.
+
+### Backend linting config
+
+Ruff and mypy are configured in `backend/pyproject.toml`. Rules: pyflakes, pycodestyle, isort, naming, security, bugbear, simplify.
+
+---
+
 ## Important Rules
 
 - **Never commit .env files** — Azure keys must stay out of git

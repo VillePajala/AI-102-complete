@@ -1,0 +1,160 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  push:
+    branches: [main]
+
+jobs:
+  # ──────────────────────────────────────────
+  # Frontend checks
+  # ──────────────────────────────────────────
+
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx next build
+
+  frontend-typecheck:
+    name: Frontend TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+
+  frontend-lint:
+    name: Frontend Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx next lint
+
+  # ──────────────────────────────────────────
+  # Backend checks
+  # ──────────────────────────────────────────
+
+  backend-lint:
+    name: Backend Lint (Ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ruff
+      - run: ruff check backend/
+      - run: ruff format --check backend/
+
+  backend-typecheck:
+    name: Backend Type Check (mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: |
+          pip install mypy
+          pip install -r backend/requirements.txt
+      - run: mypy backend/app/ --ignore-missing-imports
+
+  backend-import-check:
+    name: Backend Import Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r backend/requirements.txt
+      - run: python -c "from app.main import app; print('FastAPI app imports OK')"
+        working-directory: backend
+
+  # ──────────────────────────────────────────
+  # Security checks
+  # ──────────────────────────────────────────
+
+  secrets-scan:
+    name: Secrets Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: --only-verified
+
+  dependency-audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm audit --audit-level=high || true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: |
+          pip install pip-audit
+          pip install -r backend/requirements.txt
+          pip-audit || true
+
+  # ──────────────────────────────────────────
+  # Credential safety
+  # ──────────────────────────────────────────
+
+  no-env-files:
+    name: No .env Files Committed
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for .env files
+        run: |
+          ENV_FILES=$(find . -name '.env' -not -path './.env.example' -not -path './backend/.env.example' -not -path './node_modules/*')
+          if [ -n "$ENV_FILES" ]; then
+            echo "ERROR: .env files found in commit!"
+            echo "$ENV_FILES"
+            exit 1
+          fi
+          echo "No .env files found. Good."
+
+  no-hardcoded-keys:
+    name: No Hardcoded Azure Keys
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan for Azure key patterns
+        run: |
+          PATTERNS='(AZURE_[A-Z_]*KEY|AZURE_[A-Z_]*ENDPOINT|api[_-]?key)\s*=\s*["\x27][^"\x27]{10,}'
+          MATCHES=$(grep -rEn "$PATTERNS" --include='*.py' --include='*.ts' --include='*.tsx' --include='*.js' --include='*.json' --include='*.md' . \
+            --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=.git \
+            --exclude='.env.example' --exclude='backend/.env.example' --exclude='CLAUDE.md' --exclude='docs/*' --exclude='README.md' || true)
+          if [ -n "$MATCHES" ]; then
+            echo "WARNING: Possible hardcoded keys found:"
+            echo "$MATCHES"
+            exit 1
+          fi
+          echo "No hardcoded keys found. Good."

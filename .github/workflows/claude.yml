@@ -1,0 +1,101 @@
+# Claude Code PR Reviews and Interactive Assistant
+#
+# Authentication: Uses either ANTHROPIC_API_KEY (API billing) or
+# CLAUDE_CODE_OAUTH_TOKEN (Claude Max subscription, no API key needed).
+#
+# Setup: Run `/install-github-app` in Claude Code CLI to configure
+# automatically, or manually add the appropriate secret in
+# GitHub repo settings → Secrets → Actions.
+
+name: Claude
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+jobs:
+  # ──────────────────────────────────────────
+  # Automatic code review on every PR
+  # ──────────────────────────────────────────
+
+  code-review:
+    name: Claude Code Review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: anthropics/claude-code-action@v1
+        with:
+          # Auth: use whichever secret is available
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY || '' }}
+          prompt: |
+            Review this PR. Check for:
+            - Code quality and correctness
+            - Potential bugs or logic errors
+            - Security issues (especially around Azure key handling — never hardcode keys)
+            - TypeScript type safety in frontend code
+            - Python best practices in backend code
+            - Consistency with the project architecture described in CLAUDE.md
+            - Whether frontend changes break the expected API contract with the backend
+            - Whether backend changes match the API endpoints the frontend expects
+            Be constructive and concise. Only flag real issues, not style preferences.
+          claude_args: "--max-turns 5"
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+  # ──────────────────────────────────────────
+  # Security-focused review on every PR
+  # ──────────────────────────────────────────
+
+  security-review:
+    name: Claude Security Review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 2
+      - uses: anthropics/claude-code-security-review@main
+        with:
+          comment-pr: true
+          claude-api-key: ${{ secrets.ANTHROPIC_API_KEY || '' }}
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+  # ──────────────────────────────────────────
+  # Interactive @claude mentions in PRs/issues
+  # ──────────────────────────────────────────
+
+  interactive:
+    name: Claude Interactive
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY || '' }}
+          claude_args: "--max-turns 10"
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
