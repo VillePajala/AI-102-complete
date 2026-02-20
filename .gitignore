@@ -44,6 +44,9 @@ data/audio/*.mp3
 !data/documents/.gitkeep
 !data/audio/.gitkeep
 
+# Progress data (local JSON store)
+backend/data/progress.json
+
 # SQLite
 *.db
 *.sqlite3
