@@ -3,6 +3,15 @@
 > Exam domain: D3 — Implement agentic AI solutions (5-10%) | Service file: `backend/app/services/openai_service.py` | Estimated time: 35 minutes
 > **Estimated Azure cost:** < $0.05. Reuses the Azure OpenAI resource from Lab 01 — no new resources needed. Tool-augmented chat uses the same GPT deployment.
 
+**Difficulty:** Beginner | **Layers:** 3 | **Prerequisites:** Lab 01 (GenAI Lab)
+
+> **How to approach this lab**
+>
+> This lab extends the `openai_service.py` file you worked on in Lab 01.
+> Layer 1 is coding (system messages + API call), Layer 2 is coding (regex parsing),
+> and Layer 3 is conceptual (grounding concepts). The coding layers are
+> straightforward if you completed Lab 01.
+
 ## Overview
 
 In this lab you implement tool-augmented chat for the Agent Workshop page. You will extend the existing `openai_service.py` (from Lab 01) with a new function, `chat_with_tools()`, that turns a basic GPT conversation into a simulated agent with system instructions and tool awareness.

@@ -3,6 +3,15 @@
 > Exam domain: D4 — Implement computer vision solutions (10-15%) | Service file: `backend/app/services/vision_service.py` | Estimated time: 45 minutes
 > **Estimated Azure cost:** < $0.10. Azure AI Services Standard S0 charges ~$1 per 1,000 image analysis transactions. This lab typically uses 5-20 images.
 
+**Difficulty:** Beginner | **Layers:** 3 | **Prerequisites:** None — independent lab
+
+> **How to approach this lab**
+>
+> Each layer builds on the previous one. Implement Layer 1 first to get the
+> client working, then Layer 2 extends the same function, and Layer 3 adds
+> a new function for OCR. Have a few test images ready in `data/images/`
+> before you start — a photo with objects and one with text work well.
+
 ## Overview
 
 In this lab you will implement Azure Computer Vision image analysis and OCR by filling in the functions in `vision_service.py`. You will use the Computer Vision SDK to analyze image content (captions, tags, objects with bounding boxes) and extract text using the asynchronous Read API. These are core AI-102 skills tested under Domain 4.

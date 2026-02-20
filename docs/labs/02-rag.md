@@ -5,6 +5,15 @@
 > **Estimated time:** 90-120 minutes
 > **Estimated Azure cost:** $0 if using the **Free (F)** tier for Azure AI Search. The Free tier allows 3 indexes and 50 MB storage — plenty for this lab. Azure OpenAI costs from Lab 01 apply for the RAG chat in Layer 6 (a few cents).
 
+**Difficulty:** Intermediate | **Layers:** 6 | **Prerequisites:** Lab 01 (GenAI Lab)
+
+> **How to approach this lab**
+>
+> This lab has both coding layers and conceptual layers. For coding layers,
+> try implementing each function yourself before looking at the hints.
+> For conceptual layers, focus on understanding the concepts and answering
+> the self-check questions — these topics appear frequently on the exam.
+
 ## Overview
 
 Retrieval-Augmented Generation (RAG) is a pattern that grounds LLM responses in your own data. Instead of relying solely on the model's training data, you retrieve relevant documents from a search index and inject them into the prompt as context. The model then generates an answer based on that context.
