@@ -5,6 +5,16 @@
 > **Estimated Time:** 45 minutes
 > **Estimated Azure Cost:** < $0.10 for this lab. GPT-4o-mini is ~$0.15/$0.60 per 1M input/output tokens. DALL-E 3 is ~$0.04 per image (standard quality). Free tier Azure OpenAI has no monthly fee — you only pay per API call.
 
+**Difficulty:** Beginner | **Layers:** 3 | **Prerequisites:** None — this is the first lab
+
+> **How to approach this lab**
+>
+> Try implementing each layer yourself before looking at the hints or full solutions.
+> The stub functions in the service file have comments pointing you in the right direction.
+> If you get stuck for more than 10 minutes, open the hint. If the hint is not enough,
+> open the full solution, study it, then close it and try to write it from memory.
+> The goal is understanding, not speed.
+
 ## Overview
 
 In this lab you connect the backend to Azure OpenAI and implement three layers of generative AI functionality: chat completion, parameter tuning, and image generation with DALL-E. By the end, the GenAI Lab page in the frontend will be fully functional — you can chat with GPT and generate images.

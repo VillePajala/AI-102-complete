@@ -3,6 +3,15 @@
 > Exam domain: D5 — Implement natural language processing solutions (15-20%) | Service file: `backend/app/services/language_service.py` | Estimated time: 60 minutes
 > **Estimated Azure cost:** < $0.10. Text Analytics, Translator, and Speech each charge per transaction. This lab uses a handful of API calls during testing. Speech TTS returns a few seconds of audio per call.
 
+**Difficulty:** Intermediate | **Layers:** 4 | **Prerequisites:** None — independent lab
+
+> **How to approach this lab**
+>
+> This lab covers four different Azure services across four layers. Layers 1-2
+> use the Text Analytics SDK, Layer 3 uses the Translator REST API, and Layer 4
+> uses the Speech REST API. Take them one at a time — each uses a different
+> authentication pattern, which is a key exam topic.
+
 ## Overview
 
 In this lab you will implement four categories of Azure AI language and speech capabilities: sentiment analysis, NLP feature extraction (key phrases, entities, PII, language detection), text translation, and speech-to-text / text-to-speech. You will fill in the functions in `language_service.py` using the Text Analytics SDK for NLP and REST APIs for translation and speech.

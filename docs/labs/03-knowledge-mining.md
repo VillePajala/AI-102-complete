@@ -5,6 +5,15 @@
 > **Estimated time:** 60-90 minutes
 > **Estimated Azure cost:** $0 — reuses the Azure AI Search resource from Lab 02 (no new resources needed). Optional AI enrichment exercises may incur small costs (< $0.50) if you attach an Azure AI Services resource to a skillset.
 
+**Difficulty:** Intermediate | **Layers:** 4 | **Prerequisites:** Lab 02 (RAG Engine)
+
+> **How to approach this lab**
+>
+> This lab is primarily conceptual — it teaches Azure AI Search features that
+> the exam tests heavily (indexers, skillsets, query syntax). Focus on
+> understanding the concept tables and answering the self-check questions.
+> The optional hands-on exercises in the portal are valuable but not required.
+
 ## Overview
 
 Knowledge mining is the process of extracting structured information from unstructured data at scale using Azure AI Search. While Lab 02 focused on getting documents in and searching them, this lab covers the broader Azure AI Search feature set that the AI-102 exam tests heavily:

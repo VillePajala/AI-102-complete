@@ -3,6 +3,15 @@
 > Exam domain: D1 — Plan and manage an Azure AI solution (20-25%) | Service file: `backend/app/services/safety_service.py` | Estimated time: 30 minutes
 > **Estimated Azure cost:** $0 with the **Free (F0)** tier (5,000 transactions/month). Standard tier charges ~$1 per 1,000 text records. This lab uses ~10-30 API calls during testing.
 
+**Difficulty:** Beginner | **Layers:** 3 | **Prerequisites:** None — independent lab
+
+> **How to approach this lab**
+>
+> This lab is the shortest but covers a cross-cutting exam topic. Responsible AI
+> concepts appear in every exam domain. Layer 1 and 3 are coding, Layer 2 is a
+> small enhancement. Pay extra attention to the severity scale and content
+> categories — these are directly tested on the exam.
+
 ## Overview
 
 In this lab you implement Azure Content Safety to analyze text for harmful content and detect prompt injection attempts. By the end, the Responsible AI page in the frontend will score any text across four safety categories and flag suspicious prompts.
