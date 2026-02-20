@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import generative, agents, vision, language, search, safety
+from app.routers import generative, agents, vision, language, search, safety, progress
 
 app = FastAPI(
     title="AI-102 Command Center API",
@@ -25,6 +25,7 @@ app.include_router(vision.router)
 app.include_router(language.router)
 app.include_router(search.router)
 app.include_router(safety.router)
+app.include_router(progress.router)
 
 
 @app.get("/health")
