@@ -925,6 +925,75 @@ def text_to_speech(text: str) -> str:
 
 </details>
 
+## Exam Quiz
+
+Test your understanding with these AI-102 style questions.
+
+**Q1.** You are calling the Azure Translator REST API using a multi-service Azure AI Services key. The request returns a 401 Unauthorized error. What is the most likely cause?
+
+A) The `Content-Type` header is missing
+B) The `Ocp-Apim-Subscription-Region` header is missing
+C) The API version is incorrect
+D) The text is too long to translate
+
+<details><summary>Answer</summary>
+
+**B) The `Ocp-Apim-Subscription-Region` header is missing** — When using a multi-service key with the Translator API, you must include the region header. This is a frequent exam question. A dedicated Translator key does not require the region header, but a multi-service key does.
+
+</details>
+
+**Q2.** A text analytics response for sentiment analysis returns the label `"mixed"`. What does this mean?
+
+A) The service could not determine the sentiment
+B) The document contains both positive and negative sentences
+C) The confidence scores are all below 0.5
+D) The text is in an unsupported language
+
+<details><summary>Answer</summary>
+
+**B) The document contains both positive and negative sentences** — The `mixed` label indicates that different parts of the document have different sentiments. For example, "The food was great but the service was terrible" would likely return `mixed`. This is different from `neutral`, which means the content is neither positive nor negative.
+
+</details>
+
+**Q3.** You need to detect and redact personally identifiable information (PII) from customer feedback text. Which Text Analytics method should you use?
+
+A) `analyze_sentiment()`
+B) `recognize_entities()`
+C) `recognize_pii_entities()`
+D) `extract_key_phrases()`
+
+<details><summary>Answer</summary>
+
+**C) `recognize_pii_entities()`** — This method specifically detects PII (SSNs, emails, phone numbers, etc.) and also returns a `redacted_text` field with PII replaced by asterisks. `recognize_entities()` detects general named entities (people, places, organizations) but does not flag them as PII or provide redaction.
+
+</details>
+
+**Q4.** You need to convert text to speech using the Azure Speech REST API. The SSML you send specifies `<voice name="en-US-JennyNeural">`. What does the `X-Microsoft-OutputFormat` header control?
+
+A) The voice used for synthesis
+B) The language of the output
+C) The audio format and quality of the response
+D) The speed of speech
+
+<details><summary>Answer</summary>
+
+**C) The audio format and quality** — The `X-Microsoft-OutputFormat` header specifies the audio encoding (e.g., `audio-16khz-128kbitrate-mono-mp3`). The voice is controlled by the SSML `<voice>` element. Speech speed would be controlled by SSML `<prosody>` elements.
+
+</details>
+
+**Q5.** You want to translate a single text into both French and Spanish in a single API call. How do you configure the Translator request?
+
+A) Send two separate requests
+B) Use the `to` parameter twice: `to=fr&to=es`
+C) Set `to=fr,es` as a comma-separated value
+D) Include both languages in the request body
+
+<details><summary>Answer</summary>
+
+**B) Use the `to` parameter twice: `to=fr&to=es`** — The Translator API supports multiple target languages in a single request by repeating the `to` query parameter. The response will contain translations for each target language. This is more efficient than making separate requests.
+
+</details>
+
 ## Next Lab
 
 Continue to [Lab 06: Agent Workshop](06-agents.md) to build an AI agent with tool-calling capabilities — or jump to any other lab you have not completed yet. See the [lab index](README.md) for the full list.

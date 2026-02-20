@@ -681,6 +681,62 @@ def check_prompt(prompt: str) -> dict:
 
 </details>
 
+## Exam Quiz
+
+Test your understanding with these AI-102 style questions.
+
+**Q1.** Azure Content Safety analyzes text across four categories. Which of the following is NOT one of the four categories?
+
+A) Hate
+B) Violence
+C) Misinformation
+D) SelfHarm
+
+<details><summary>Answer</summary>
+
+**C) Misinformation** — The four Content Safety categories are Hate, SelfHarm, Sexual, and Violence. Misinformation is not a category in Azure Content Safety. Content accuracy and misinformation are handled through other means (like RAG grounding and prompt engineering).
+
+</details>
+
+**Q2.** A customer support chatbot needs to block clearly harmful content but allow mildly edgy humor. What severity threshold should you configure?
+
+A) Block severity >= 0
+B) Block severity >= 2
+C) Block severity >= 4
+D) Block severity >= 6
+
+<details><summary>Answer</summary>
+
+**C) Block severity >= 4** — Severity 0 is safe, 1-2 is low (mildly concerning), 3-4 is medium, 5-6 is high. Blocking at >= 4 allows low-severity content (mildly edgy humor) while blocking medium and high severity. Blocking at >= 0 would block everything. Blocking at >= 6 would only block the most extreme content.
+
+</details>
+
+**Q3.** What is the difference between Azure OpenAI content filtering and Azure Content Safety service?
+
+A) They are the same service
+B) Content filtering runs automatically on Azure OpenAI inputs/outputs; Content Safety is a separate service you call explicitly
+C) Content Safety is built into Azure OpenAI; content filtering is standalone
+D) Content filtering only works with DALL-E; Content Safety only works with text
+
+<details><summary>Answer</summary>
+
+**B) Content filtering runs automatically; Content Safety is called explicitly** — Azure OpenAI has built-in content filters that automatically analyze inputs and outputs. Azure Content Safety is a separate service you integrate into your own application logic for analyzing arbitrary user-generated content. The exam tests this distinction.
+
+</details>
+
+**Q4.** You need to maintain a list of specific brand names that should always be flagged in user content, regardless of severity scores. Which Content Safety feature should you use?
+
+A) Severity thresholds
+B) Custom blocklists
+C) Prompt Shields
+D) Content categories
+
+<details><summary>Answer</summary>
+
+**B) Custom blocklists** — The `BlocklistClient` in Azure Content Safety lets you create and manage custom blocklists of specific terms that are always flagged. Severity thresholds and categories are for general content analysis. Prompt Shields detect injection attempts, not specific terms.
+
+</details>
+
 ## What You Learned
 
 | Concept | How You Used It | Exam Relevance |

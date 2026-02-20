@@ -799,6 +799,62 @@ def search_documents(query: str) -> list[dict]:
 
 </details>
 
+## Exam Quiz
+
+Test your understanding with these AI-102 style questions.
+
+**Q1.** You need to upload a batch of 500 documents to an Azure AI Search index. A document with ID "doc-42" already exists in the index and you want to update only its `title` field without affecting other fields. Which method should you use?
+
+A) `upload_documents()`
+B) `merge_documents()`
+C) `merge_or_upload_documents()`
+D) `delete_documents()`
+
+<details><summary>Answer</summary>
+
+**B) `merge_documents()`** — Merge updates only the specified fields on an existing document. `upload_documents()` would replace the entire document. `merge_or_upload_documents()` would also work but `merge_documents()` is the most precise choice when you know the document exists.
+
+</details>
+
+**Q2.** A user searches for "car maintenance" but relevant documents use the word "automobile" instead. Which search approach would find these documents?
+
+A) Full-text keyword search only
+B) Full-text keyword search with an `en.lucene` analyzer
+C) Vector search using embeddings
+D) OData filter expressions
+
+<details><summary>Answer</summary>
+
+**C) Vector search using embeddings** — Vector search captures semantic similarity, so "car" and "automobile" would have similar embeddings. Keyword search (even with an English analyzer) would not match different words. Hybrid search (keyword + vector) would also work. Filters do not perform semantic matching.
+
+</details>
+
+**Q3.** You are building a RAG pipeline. The model sometimes ignores the retrieved context and answers from its training data. What is the most effective solution?
+
+A) Increase the `temperature` parameter
+B) Add a system message instructing the model to use only the provided context
+C) Use a larger model with more parameters
+D) Increase the number of retrieved documents to 100
+
+<details><summary>Answer</summary>
+
+**B) Add a system message instructing the model to use only the provided context** — A well-crafted system message that tells the model to answer only from the provided context and say when it doesn't know is the standard approach to reduce hallucination in RAG. Increasing temperature increases randomness. More documents may exceed the context window.
+
+</details>
+
+**Q4.** Your search index has a `content` field of type `Edm.String` with `searchable=true`. You want to also enable filtering by a `category` field. What attribute must the `category` field have?
+
+A) `searchable`
+B) `filterable`
+C) `sortable`
+D) `facetable`
+
+<details><summary>Answer</summary>
+
+**B) `filterable`** — To use a field in OData `$filter` expressions, it must be marked as `filterable`. `searchable` enables full-text search, `sortable` enables sorting, and `facetable` enables faceted navigation (category counts).
+
+</details>
+
 ## Next Lab
 
 Continue to **[Lab 03: Knowledge Mining](03-knowledge-mining.md)** to learn about index management, indexers, AI enrichment skillsets, and advanced query syntax — all key AI-102 exam topics that build on the search foundation you just created.

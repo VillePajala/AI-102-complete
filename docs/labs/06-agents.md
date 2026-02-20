@@ -639,6 +639,62 @@ def chat_with_tools(
 
 </details>
 
+## Exam Quiz
+
+Test your understanding with these AI-102 style questions.
+
+**Q1.** You are designing an AI agent that needs to answer questions about your company's internal documents. Which grounding method should you use?
+
+A) Fine-tune the model on the documents
+B) Use RAG with Azure AI Search
+C) Increase the model's temperature
+D) Use a larger model with a bigger context window
+
+<details><summary>Answer</summary>
+
+**B) Use RAG with Azure AI Search** — RAG is the correct approach for grounding agents in dynamic, frequently-changing documents. Fine-tuning changes the model's weights and is better for teaching style or domain knowledge, not for referencing specific documents. A larger context window doesn't help if you don't have a retrieval mechanism.
+
+</details>
+
+**Q2.** What is the difference between the `system` and `user` roles in Azure OpenAI chat messages?
+
+A) System messages are visible to the user; user messages are not
+B) System messages set agent behavior and instructions; user messages are the conversation input
+C) System messages are optional; user messages are required
+D) Both B and C
+
+<details><summary>Answer</summary>
+
+**D) Both B and C** — System messages define the agent's persona, behavior boundaries, and instructions. User messages contain the actual conversation. System messages are optional (the API works without them), but they are essential for agent behavior control.
+
+</details>
+
+**Q3.** In Azure AI Foundry Agent Service, which built-in tool would you use to let an agent run Python code to analyze uploaded data files?
+
+A) File search
+B) Bing grounding
+C) Code interpreter
+D) Function calling
+
+<details><summary>Answer</summary>
+
+**C) Code interpreter** — The code interpreter tool runs Python in a secure sandbox, allowing the agent to analyze data, generate charts, and process files. File search is for searching uploaded documents. Bing grounding is for web search. Function calling invokes your custom functions.
+
+</details>
+
+**Q4.** A developer is using Azure OpenAI native function calling. The API returns a response with `tool_calls` containing `function.name` and `function.arguments`. What should the developer do next?
+
+A) Send the function arguments directly to the user
+B) Execute the function locally and send the result back in a `tool` role message
+C) Call the Azure OpenAI API again with the same messages
+D) Parse the function name from the response text using regex
+
+<details><summary>Answer</summary>
+
+**B) Execute the function locally and send the result back** — In the native function calling flow: (1) the model returns tool_calls, (2) you execute the function, (3) you send the result back as a `tool` role message, (4) the model uses the result to generate a final response. Option D describes simulated tool calling (like this lab), not native function calling.
+
+</details>
+
 ## What You Learned
 
 | Concept | How You Used It | Exam Relevance |

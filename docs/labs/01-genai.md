@@ -603,6 +603,62 @@ def chat_with_tools(
 
 </details>
 
+## Exam Quiz
+
+Test your understanding with these AI-102 style questions.
+
+**Q1.** You are building an application that uses Azure OpenAI. You need the model to produce consistent, reproducible output for the same input. Which parameter should you set?
+
+A) `max_tokens=1`
+B) `temperature=0`
+C) `top_p=0`
+D) `frequency_penalty=2.0`
+
+<details><summary>Answer</summary>
+
+**B) `temperature=0`** — Setting temperature to 0 makes the model nearly deterministic, always picking the most likely next token. `top_p=0` would also reduce randomness but Microsoft recommends adjusting temperature OR top_p, not both. `max_tokens=1` would limit the response to one token, not make it consistent.
+
+</details>
+
+**Q2.** A developer creates an `AzureOpenAI` client but gets an authentication error. The code uses `api_key` and `azure_endpoint` correctly. What is the most likely missing parameter?
+
+A) `model`
+B) `api_version`
+C) `organization`
+D) `deployment_name`
+
+<details><summary>Answer</summary>
+
+**B) `api_version`** — The `AzureOpenAI` client requires `api_version` (e.g., `"2024-10-21"`), which is not needed for the standard OpenAI client. This is a key Azure-specific requirement. `model` and `deployment_name` are passed to individual API calls, not the client constructor.
+
+</details>
+
+**Q3.** In Azure OpenAI, what does the `model` parameter in `client.chat.completions.create()` refer to?
+
+A) The underlying model name (e.g., `gpt-4o`)
+B) The deployment name you created in Azure AI Foundry
+C) The Azure resource name
+D) The API version string
+
+<details><summary>Answer</summary>
+
+**B) The deployment name** — In Azure OpenAI, the `model` parameter maps to your deployment name, not the underlying model name. You might deploy `gpt-4o-mini` with a deployment name like `my-gpt-deployment`, and you would pass `"my-gpt-deployment"` as the model parameter.
+
+</details>
+
+**Q4.** You need to generate images using DALL-E 3 in Azure OpenAI. Which image sizes are supported? (Select all that apply.)
+
+A) `256x256`
+B) `512x512`
+C) `1024x1024`
+D) `1024x1792`
+
+<details><summary>Answer</summary>
+
+**C) `1024x1024` and D) `1024x1792`** — DALL-E 3 supports `1024x1024`, `1024x1792`, and `1792x1024`. The smaller sizes (`256x256`, `512x512`) are only supported by DALL-E 2.
+
+</details>
+
 ## What You Learned
 
 | Concept | How You Used It | Exam Relevance |
