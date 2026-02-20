@@ -1,0 +1,84 @@
+"""Azure Language & Speech services — stub for guided lab implementation.
+
+Students implement this file layer by layer following docs/labs/05-language.md.
+The router (language.py) calls these functions — signatures must not change.
+"""
+
+import logging
+
+from app.config import settings
+
+logger = logging.getLogger(__name__)
+
+
+# === LAYER 1: Sentiment Analysis (Lab 05, Layer 1) ===
+# TODO: Create a TextAnalyticsClient and call analyze_sentiment, extract_key_phrases,
+#       recognize_entities, recognize_pii_entities, detect_language
+# SDK: azure-ai-textanalytics
+# Docs: https://learn.microsoft.com/en-us/azure/ai-services/language-service/sentiment-opinion-mining/quickstart
+# See docs/labs/05-language.md — Layer 1
+
+
+def analyze_text(text: str, analysis_type: str = "all") -> dict:
+    """Analyze text for sentiment, key phrases, entities, PII, and language.
+
+    Called by: language.router /api/language/analyze
+    Args:
+        text: The text to analyze.
+        analysis_type: One of "all", "sentiment", "keyPhrases", "entities", "pii", "language".
+    Returns: Dict with results for the requested analysis type(s).
+    """
+    raise NotImplementedError("See docs/labs/05-language.md — Layer 1")
+
+
+# === LAYER 2: NLP Features (Lab 05, Layer 2) ===
+# Layer 2 extends analyze_text to handle entities, PII, and language detection.
+# No new function — you add more analysis types to your Layer 1 implementation.
+
+
+# === LAYER 3: Translation (Lab 05, Layer 3) ===
+# TODO: Call the Azure Translator REST API using httpx
+# API: https://api.cognitive.microsofttranslator.com/translate
+# See docs/labs/05-language.md — Layer 3
+
+
+def translate_text(text: str, source: str, target: str) -> str:
+    """Translate text between languages using the Translator REST API.
+
+    Called by: language.router /api/language/translate
+    Args:
+        text: The text to translate.
+        source: Source language code (or "auto" for auto-detection).
+        target: Target language code (e.g. "es", "fr", "de").
+    Returns: The translated text string.
+    """
+    raise NotImplementedError("See docs/labs/05-language.md — Layer 3")
+
+
+# === LAYER 4: Speech Services (Lab 05, Layer 4) ===
+# TODO: Call the Azure Speech REST APIs for STT and TTS
+# STT endpoint: https://{region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1
+# TTS endpoint: https://{region}.tts.speech.microsoft.com/cognitiveservices/v1
+# See docs/labs/05-language.md — Layer 4
+
+
+def speech_to_text(audio_bytes: bytes) -> str:
+    """Convert speech audio to text using the Speech REST API.
+
+    Called by: language.router /api/language/speech-to-text
+    Args:
+        audio_bytes: WAV audio file contents.
+    Returns: The recognized text string.
+    """
+    raise NotImplementedError("See docs/labs/05-language.md — Layer 4")
+
+
+def text_to_speech(text: str) -> str:
+    """Convert text to speech audio using the Speech REST API.
+
+    Called by: language.router /api/language/text-to-speech
+    Args:
+        text: The text to synthesize.
+    Returns: Base64 data URL string (data:audio/mp3;base64,...).
+    """
+    raise NotImplementedError("See docs/labs/05-language.md — Layer 4")

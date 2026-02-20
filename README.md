@@ -1,198 +1,97 @@
 # AI-102 Command Center
 
-A full-stack learning hub and hands-on lab for the **Microsoft AI-102 AI Engineer Associate** exam.
+A hands-on lab for the **Microsoft AI-102 AI Engineer Associate** exam. You implement real Azure AI services — chat completion, image generation, computer vision, NLP, search, content safety — by writing Python code layer by layer, with a web UI as your test harness.
 
-## What Is This?
+Building the app IS the studying. Every function you implement maps to a skill the exam tests.
 
-A single web application that serves as:
+## Getting Started
 
-1. **Learning Hub** — Dashboard with study resources, progress tracking, and exam topic mapping
-2. **Hands-On Lab** — Every exam domain becomes a working module using real Azure/Microsoft Foundry services
-3. **Study Companion** — RAG-powered quiz and concept explainer built on the same AI services you're learning
+1. **Clone this repo**
+   ```bash
+   git clone https://github.com/VillePajala/AI-102-complete.git
+   cd AI-102-complete
+   ```
 
-Building the app IS the studying. Every feature implements skills the exam tests.
+2. **Follow the setup guide** — **[docs/labs/README.md](docs/labs/README.md)** has everything: tool installation, Azure resource provisioning, environment variables, and server startup.
 
-## Architecture
+3. **Start Lab 01** — **[docs/labs/01-genai.md](docs/labs/01-genai.md)** is the first lab. Each lab ends with a link to the next one.
+
+That's it. The setup guide walks you through every step.
+
+## How It Works
+
+The frontend (Next.js) and the API layer (FastAPI routers) are already built. The **service files** in `backend/app/services/` are stubs — every function raises `NotImplementedError`.
+
+You follow the [lab guides](docs/labs/README.md) to implement each function. Each lab is split into **layers** — small, focused steps. After each layer, you test your work in the browser and see real results instead of errors.
 
 ```
 ┌─────────────────────────────────────────────┐
 │              Next.js Frontend                │
-│     (project root, built with v0.app)        │
-│   src/app/        → Pages per module         │
-│   src/components/ → shadcn/ui + v0 output    │
-│   src/lib/        → API client, utilities    │
+│   Already built — your visual test harness   │
 └──────────────────┬──────────────────────────┘
-                   │ REST API (:3000 → :8000)
+                   │ REST API
 ┌──────────────────▼──────────────────────────┐
 │            Python FastAPI Backend             │
-│              (in /backend)                   │
-│   app/routers/   → One router per module     │
-│   app/services/  → Azure SDK wrappers        │
+│   Routers: wired up    Services: YOU BUILD   │
 └──────────────────┬──────────────────────────┘
                    │
 ┌──────────────────▼──────────────────────────┐
 │         Microsoft Foundry (Azure)            │
 │   OpenAI · Vision · Speech · Translator      │
-│   AI Search · Document Intelligence          │
-│   Content Safety · Agent Service             │
+│   AI Search · Content Safety · Agents        │
 └─────────────────────────────────────────────┘
 ```
 
-## Lab Modules
+## Labs
 
-| # | Module | Exam Domain | Weight | Route |
-|---|--------|-------------|--------|-------|
-| 1 | Foundry Hub | D1: Plan & manage | 20-25% | `/foundry` |
-| 2 | GenAI Lab | D2: Generative AI | 15-20% | `/generative` |
-| 3 | RAG Engine | D2+D6: RAG + Search | 15-20% | `/rag` |
-| 4 | Agent Workshop | D3: Agentic solutions | 5-10% | `/agents` |
-| 5 | Vision Lab | D4: Computer vision | 10-15% | `/vision` |
-| 6 | Language & Speech | D5: NLP | 15-20% | `/language` |
-| 7 | Knowledge Mining | D6: Search + Docs | 15-20% | `/search` |
-| 8 | Responsible AI | D1: Cross-cutting | — | `/responsible-ai` |
+7 labs, 26 layers total. You create Azure resources as you go — no need to set up everything upfront.
 
-## Setup
+| # | Lab | What You Build | Exam Domain | Weight |
+|---|-----|---------------|-------------|--------|
+| 01 | [GenAI Lab](docs/labs/01-genai.md) | Chat completion, parameter tuning, DALL-E | D2: Generative AI | 15-20% |
+| 02 | [RAG Engine](docs/labs/02-rag.md) | Document upload, search, grounded chat | D2+D6: RAG + Search | 15-20% |
+| 03 | [Knowledge Mining](docs/labs/03-knowledge-mining.md) | Index management, skillsets, query syntax | D6: Search + Docs | 15-20% |
+| 04 | [Vision Lab](docs/labs/04-vision.md) | Image analysis, object detection, OCR | D4: Computer vision | 10-15% |
+| 05 | [Language & Speech](docs/labs/05-language.md) | Sentiment, entities, translation, STT/TTS | D5: NLP | 15-20% |
+| 06 | [Agent Workshop](docs/labs/06-agents.md) | System instructions, tool calls, grounding | D3: Agentic solutions | 5-10% |
+| 07 | [Responsible AI](docs/labs/07-responsible-ai.md) | Content safety, severity levels, prompt shield | D1: Plan & manage | 20-25% |
 
-### Frontend (Next.js)
-
-```bash
-npm install
-npm run dev
-# Opens at http://localhost:3000
-```
-
-### Backend (FastAPI)
-
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate   # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env       # Fill in your Azure keys
-uvicorn app.main:app --reload --port 8000
-```
-
-### Azure Resources Needed
-
-See `backend/.env.example` for all required credentials. You'll provision these as you build each module — no need to set up everything upfront.
-
-## Development Workflow
-
-This project uses two AI tools that both connect to this GitHub repo:
-
-| Tool | What It Does | What It Touches |
-|------|-------------|-----------------|
-| **v0 (v0.app)** | Designs and builds all frontend UI | `src/`, `package.json`, `components.json` |
-| **Claude Code** | Backend, Azure SDK code, API wiring, docs | `backend/`, `docs/`, `src/lib/api.ts` |
-
-### How v0 Works With This Repo
-
-1. v0.app is connected to this GitHub repository
-2. Each v0 chat session creates a branch (e.g., `v0/main-abc123`)
-3. Every UI change in v0 = automatic commit on that branch
-4. When satisfied → "Open PR" → merge to main
-5. Start new v0 chat for the next feature
-
-### How Claude Code Works With This Repo
-
-1. Clone/pull locally
-2. Write backend and wiring code
-3. Commit and push when instructed
-
-The two tools don't conflict because v0 handles `src/` (frontend) and Claude Code handles `backend/` and `docs/`.
+**Recommended order:** 01 → 02 → 03 → 04 → 05 → 06 → 07. Labs 04, 05, and 07 are independent and can be done anytime.
 
 ## Project Structure
 
 ```
-AI-102-complete/                ← repo root = Next.js root
-├── src/
-│   ├── app/                    # Pages (one dir per module)
-│   ├── components/             # UI components (shadcn/ui + v0)
-│   └── lib/                    # API client, utilities
-├── backend/                    # Python FastAPI
-│   ├── app/main.py             # App entry + CORS
-│   ├── app/config.py           # Azure credentials (.env)
-│   ├── app/routers/            # API route handlers
-│   └── app/services/           # Azure SDK integration
+AI-102-complete/
 ├── docs/
-│   └── exam-topics.md          # Complete exam objectives + study links
-├── data/                       # Sample files for labs
-├── CLAUDE.md                   # Detailed AI assistant context
-└── README.md                   # This file
+│   ├── labs/                  # Lab guides — START HERE
+│   │   ├── README.md          # Setup guide + lab index
+│   │   ├── 01-genai.md        # Lab 01: GenAI Lab
+│   │   ├── 02-rag.md          # Lab 02: RAG Engine
+│   │   ├── 03-knowledge-mining.md
+│   │   ├── 04-vision.md       # Lab 04: Vision Lab
+│   │   ├── 05-language.md     # Lab 05: Language & Speech
+│   │   ├── 06-agents.md       # Lab 06: Agent Workshop
+│   │   └── 07-responsible-ai.md
+│   └── exam-topics.md         # Complete AI-102 exam objectives + study links
+├── backend/
+│   ├── app/
+│   │   ├── main.py            # FastAPI app (already configured)
+│   │   ├── config.py          # Loads Azure credentials from .env
+│   │   ├── routers/           # API routes (already wired up)
+│   │   └── services/          # Azure SDK code (YOU IMPLEMENT THESE)
+│   ├── requirements.txt
+│   ├── .env.example           # Template for Azure credentials
+│   └── .env                   # Your credentials (gitignored)
+├── src/                       # Next.js frontend (already built)
+│   ├── app/                   # Pages — one per lab module
+│   ├── components/            # UI components
+│   └── lib/                   # Utilities
+└── data/                      # Sample images, documents, audio for labs
 ```
-
-**Why Next.js is at root:** v0.app requires `package.json` at the repository root to properly import and run the project in its sandbox.
-
-## Roadmap
-
-### Phase 1: Foundation (CURRENT)
-- [x] Project scaffolding (Next.js + FastAPI + folder structure)
-- [x] Exam topics documentation with all 6 domains mapped
-- [x] CLAUDE.md with full architecture and workflow reference
-- [x] GitHub repo + v0 connected
-- [ ] Frontend UI built in v0 (dashboard, sidebar, all module pages)
-- [ ] Refine and merge v0 frontend PR
-
-### Phase 2: Core AI Modules
-Build the highest-weight exam modules first. For each module: study the Azure service → provision in Azure → build Python backend → wire to UI → test.
-
-- [ ] **GenAI Lab** (Domain 2) — Azure OpenAI chat, prompt engineering, DALL-E, parameter tuning
-  - Provision: Azure OpenAI resource + deploy GPT model
-  - Backend: `backend/app/services/openai_service.py`, chat completions, image generation
-  - Wire: connect chat UI and parameter panel to backend
-- [ ] **RAG Engine** (Domain 2+6) — Document upload, indexing, grounded chat with citations
-  - Provision: Azure AI Search + embedding model deployment
-  - Backend: document chunking, embedding generation, index management, grounded chat
-  - Wire: upload flow, search results, citation display
-- [ ] **Knowledge Mining** (Domain 6) — Search indexes, skillsets, Document Intelligence
-  - Provision: Azure AI Search (reuse from RAG) + Document Intelligence resource
-  - Backend: index CRUD, skillset configuration, document extraction
-  - Wire: index viewer, query explorer, document analysis results
-
-### Phase 3: Specialized Service Modules
-- [ ] **Vision Lab** (Domain 4) — Image analysis, OCR, Custom Vision
-  - Provision: Azure AI Vision resource + Custom Vision resource
-  - Backend: image analysis, OCR, custom model training/prediction
-  - Wire: image upload, bounding box overlay, OCR results
-- [ ] **Language & Speech** (Domain 5) — Text analytics, translation, STT/TTS
-  - Provision: Azure AI Language + Speech + Translator resources
-  - Backend: sentiment, entities, PII, translation, speech processing
-  - Wire: text analysis results, audio recording/playback
-- [ ] **Agent Workshop** (Domain 3) — AI agents with Foundry Agent Service
-  - Provision: Foundry Agent Service setup
-  - Backend: agent creation, tool configuration, conversation handling
-  - Wire: agent config panel, chat with tool-use visibility
-
-### Phase 4: Governance and Cross-Cutting
-- [ ] **Responsible AI** (Domain 1) — Content Safety, prompt shields, blocklists
-  - Provision: Azure Content Safety resource
-  - Backend: text/image safety analysis, prompt shield check, blocklist CRUD
-  - Wire: content tester, governance checklist
-- [ ] **Foundry Hub** (Domain 1) — Resource status dashboard, provisioning guide
-  - Backend: health checks for all connected services
-  - Wire: service status indicators, configuration panel
-
-### Phase 5: Study Features
-- [ ] **Progress tracker** — Domain completion percentages, module status, exam readiness score
-- [ ] **Resources page** — Curated links by domain, personal notes with localStorage persistence
-- [ ] **Quiz mode** — AI-generated questions from study docs (powered by RAG Engine)
-- [ ] **Flashcards** — Key concept cards per domain
-
-### Phase 6: Shareability
-Make the project usable by anyone studying for AI-102.
-
-- [ ] **BYOK (Bring Your Own Keys)** — Settings page in UI where users enter their own Azure keys. Keys stored in browser localStorage, passed to backend per-request. No shared credentials needed.
-- [ ] **Demo mode** — Mock/simulated responses for all modules so users can explore without Azure keys
-- [ ] **Azure provisioning guide** — Step-by-step instructions with free tier info for each service
-- [ ] **Docker Compose** — Single `docker compose up` to run frontend + backend locally
-- [ ] **Vercel deployment** — One-click deploy button for frontend, backend deploy guide
-- [ ] **Contributing guide** — How others can add features or improve the project
-
----
 
 ## Study Reference
 
-See `docs/exam-topics.md` for the complete AI-102 exam objectives (6 domains, all subtopics), domain weights, platform naming transition guide, and curated MS Learn links.
+See [`docs/exam-topics.md`](docs/exam-topics.md) for the complete AI-102 exam objectives (6 domains, all subtopics), domain weights, platform naming transition guide, and curated MS Learn links.
 
 ## Exam Info
 
@@ -201,3 +100,40 @@ See `docs/exam-topics.md` for the complete AI-102 exam objectives (6 domains, al
 - **Passing score:** 700/1000
 - **Duration:** 100 minutes
 - **Current terminology:** "Microsoft Foundry" (formerly Azure AI Foundry, formerly Azure AI Services)
+
+---
+
+## For Contributors
+
+This section is for people contributing to the project itself, not for learners following the labs.
+
+### Development Workflow
+
+The project is built using two AI tools connected to this GitHub repo:
+
+| Tool | Responsibility | What It Touches |
+|------|---------------|-----------------|
+| **v0 (v0.app)** | Frontend UI design and implementation | `src/`, `package.json`, `components.json` |
+| **Claude Code** | Backend, API wiring, docs, Azure SDK code | `backend/`, `docs/`, `src/lib/api.ts` |
+
+**v0 workflow:** v0.app connects to the repo → creates branches (`v0/main-*`) → auto-commits → opens PRs. Never pushes directly to main.
+
+**Claude Code workflow:** Local development → commits and pushes when instructed.
+
+The two tools don't conflict because v0 handles `src/` (frontend) and Claude Code handles `backend/` and `docs/`.
+
+**Why Next.js is at the repo root** (not in `/frontend`): v0.app requires `package.json` at the repository root to properly import the project.
+
+### Roadmap
+
+**Phase 1: Foundation** — Project scaffold, exam docs, CI/CD, frontend UI, lab guide system
+
+**Phase 2: Core Modules** — GenAI Lab, RAG Engine, Knowledge Mining
+
+**Phase 3: Specialized Modules** — Vision Lab, Language & Speech, Agent Workshop
+
+**Phase 4: Governance** — Responsible AI, Foundry Hub
+
+**Phase 5: Study Features** — Progress tracking, quiz mode, flashcards
+
+**Phase 6: Shareability** — BYOK settings page, demo mode, Docker Compose, deployment

@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.routers import generative, agents, vision, language, search, safety
+
 app = FastAPI(
     title="AI-102 Command Center API",
     description="Backend API for the AI-102 exam preparation command center",
@@ -16,15 +18,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Router includes (uncomment as routers are implemented)
-# from app.routers import generative, agents, vision, language, search, documents, safety
-# app.include_router(generative.router)
-# app.include_router(agents.router)
-# app.include_router(vision.router)
-# app.include_router(language.router)
-# app.include_router(search.router)
-# app.include_router(documents.router)
-# app.include_router(safety.router)
+# Register all routers
+app.include_router(generative.router)
+app.include_router(agents.router)
+app.include_router(vision.router)
+app.include_router(language.router)
+app.include_router(search.router)
+app.include_router(safety.router)
 
 
 @app.get("/health")
