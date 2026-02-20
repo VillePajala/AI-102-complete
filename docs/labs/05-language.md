@@ -1,6 +1,7 @@
 # Lab 05: Language & Speech
 
 > Exam domain: D5 — Implement natural language processing solutions (15-20%) | Service file: `backend/app/services/language_service.py` | Estimated time: 60 minutes
+> **Estimated Azure cost:** < $0.10. Text Analytics, Translator, and Speech each charge per transaction. This lab uses a handful of API calls during testing. Speech TTS returns a few seconds of audio per call.
 
 ## Overview
 
@@ -16,6 +17,11 @@ The frontend Language & Speech page (`/language`) is already built. The backend 
 
 ## Azure Setup
 
+- [ ] Set up Azure AI Services multi-service resource (or reuse from Lab 04)
+- [ ] Configure Translator key and region in `backend/.env`
+- [ ] Configure Speech key and region in `backend/.env`
+- [ ] Restart backend server
+
 ### Text Analytics (covered by Azure AI Services multi-service resource)
 
 If you already set up an Azure AI Services resource in Lab 04, you can reuse the same endpoint and key. If not:
@@ -29,6 +35,8 @@ If you already set up an Azure AI Services resource in Lab 04, you can reuse the
    AZURE_AI_SERVICES_KEY=your-key-here
    ```
 
+   **Where to find:** Azure Portal → your AI Services resource → **Keys and Endpoint** → copy **Endpoint** and **Key 1**.
+
 ### Translator
 
 The Translator API can be accessed with the multi-service key, but it also needs a region. You can either set dedicated Translator variables or fall back to the multi-service key:
@@ -41,6 +49,8 @@ The Translator API can be accessed with the multi-service key, but it also needs
    AZURE_TRANSLATOR_REGION=eastus            # or leave blank to use AZURE_SPEECH_REGION
    ```
 
+   **Where to find:** If using the multi-service resource, these can be left blank (the code falls back to `AZURE_AI_SERVICES_KEY`). The **region** is shown on the resource's **Overview** page (e.g., `eastus`, `westeurope`). If you created a dedicated Translator resource, find the key under **Keys and Endpoint**.
+
 ### Speech Services
 
 1. In the Azure Portal, search for **Speech** and create a **Speech** resource (or use the multi-service resource).
@@ -51,11 +61,29 @@ The Translator API can be accessed with the multi-service key, but it also needs
    AZURE_SPEECH_REGION=eastus
    ```
 
+   **Where to find:** Azure Portal → your Speech resource → **Keys and Endpoint** → copy **Key 1** and note the **Location/Region** (e.g., `eastus`).
+
+**Where to find each value (summary):**
+
+| Variable | Where to Find It |
+|----------|-----------------|
+| `AZURE_AI_SERVICES_ENDPOINT` | AI Services resource → **Keys and Endpoint** → **Endpoint** |
+| `AZURE_AI_SERVICES_KEY` | AI Services resource → **Keys and Endpoint** → **Key 1** |
+| `AZURE_TRANSLATOR_KEY` | Leave blank to use AI Services key, or: Translator resource → **Keys and Endpoint** → **Key 1** |
+| `AZURE_TRANSLATOR_REGION` | Resource **Overview** page → **Location** (e.g., `eastus`) |
+| `AZURE_SPEECH_KEY` | Speech resource → **Keys and Endpoint** → **Key 1** |
+| `AZURE_SPEECH_REGION` | Speech resource → **Overview** → **Location** (e.g., `eastus`) |
+
 Restart the backend server after updating `.env`.
 
 ---
 
 ## Layer 1: Sentiment Analysis
+
+- [ ] Add SDK imports to `language_service.py`
+- [ ] Implement `_get_text_client()` helper
+- [ ] Implement `analyze_text()` with sentiment analysis
+- [ ] Test via frontend or Swagger UI
 
 ### What You Will Learn
 
@@ -183,6 +211,12 @@ def analyze_text(text: str, analysis_type: str = "all") -> dict:
 ---
 
 ## Layer 2: NLP Features
+
+- [ ] Add key phrase extraction to `analyze_text()`
+- [ ] Add entity recognition to `analyze_text()`
+- [ ] Add PII detection to `analyze_text()`
+- [ ] Add language detection to `analyze_text()`
+- [ ] Test each analysis type
 
 ### What You Will Learn
 
@@ -315,6 +349,9 @@ def analyze_text(text: str, analysis_type: str = "all") -> dict:
 
 ## Layer 3: Translation
 
+- [ ] Implement `translate_text()` with Translator REST API
+- [ ] Test translation between multiple language pairs
+
 ### What You Will Learn
 
 - How to call the Azure Translator REST API (no SDK — direct HTTP)
@@ -438,6 +475,11 @@ def translate_text(text: str, source: str, target: str) -> str:
 ---
 
 ## Layer 4: Speech Services
+
+- [ ] Implement `speech_to_text()` with Speech REST API
+- [ ] Implement `text_to_speech()` with SSML
+- [ ] Test STT with a WAV audio file
+- [ ] Test TTS and verify audio playback
 
 ### What You Will Learn
 

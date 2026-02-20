@@ -28,7 +28,10 @@ def analyze_text(text: str, analysis_type: str = "all") -> dict:
         analysis_type: One of "all", "sentiment", "keyPhrases", "entities", "pii", "language".
     Returns: Dict with results for the requested analysis type(s).
     """
-    raise NotImplementedError("See docs/labs/05-language.md — Layer 1")
+    raise NotImplementedError(
+        "See docs/labs/05-language.md — Layer 1. "
+        "Hint: from azure.ai.textanalytics import TextAnalyticsClient"
+    )
 
 
 # === LAYER 2: NLP Features (Lab 05, Layer 2) ===
@@ -52,7 +55,10 @@ def translate_text(text: str, source: str, target: str) -> str:
         target: Target language code (e.g. "es", "fr", "de").
     Returns: The translated text string.
     """
-    raise NotImplementedError("See docs/labs/05-language.md — Layer 3")
+    raise NotImplementedError(
+        "See docs/labs/05-language.md — Layer 3. "
+        "Hint: import httpx — REST API call to api.cognitive.microsofttranslator.com"
+    )
 
 
 # === LAYER 4: Speech Services (Lab 05, Layer 4) ===
@@ -70,7 +76,10 @@ def speech_to_text(audio_bytes: bytes) -> str:
         audio_bytes: WAV audio file contents.
     Returns: The recognized text string.
     """
-    raise NotImplementedError("See docs/labs/05-language.md — Layer 4")
+    raise NotImplementedError(
+        "See docs/labs/05-language.md — Layer 4. "
+        "Hint: import httpx — POST audio/wav to {region}.stt.speech.microsoft.com"
+    )
 
 
 def text_to_speech(text: str) -> str:
@@ -81,4 +90,7 @@ def text_to_speech(text: str) -> str:
         text: The text to synthesize.
     Returns: Base64 data URL string (data:audio/mp3;base64,...).
     """
-    raise NotImplementedError("See docs/labs/05-language.md — Layer 4")
+    raise NotImplementedError(
+        "See docs/labs/05-language.md — Layer 4. "
+        "Hint: import httpx, base64 — POST SSML to {region}.tts.speech.microsoft.com"
+    )

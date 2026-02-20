@@ -3,6 +3,7 @@
 > **Exam domain:** D6 — Implement knowledge mining and document intelligence solutions (15-20%)
 > **Service file:** `backend/app/services/search_service.py` (extends Lab 02)
 > **Estimated time:** 60-90 minutes
+> **Estimated Azure cost:** $0 — reuses the Azure AI Search resource from Lab 02 (no new resources needed). Optional AI enrichment exercises may incur small costs (< $0.50) if you attach an Azure AI Services resource to a skillset.
 
 ## Overview
 
@@ -33,6 +34,10 @@ These are optional. The concepts can be learned from the lab content alone.
 ---
 
 ## Layer 1: Index Management
+
+- [ ] Review `SearchIndexClient` vs `SearchClient` concepts
+- [ ] Understand field types, analyzers, and scoring profiles
+- [ ] (Optional) Create a second index programmatically
 
 ### What You Will Learn
 
@@ -188,6 +193,11 @@ No required code changes to `search_service.py`. This layer builds understanding
 
 ## Layer 2: Data Sources and Indexers
 
+- [ ] Review indexer pipeline concepts (data source → indexer → skillset → index)
+- [ ] Understand change detection policies
+- [ ] (Optional) Set up an indexer via Import data wizard
+- [ ] Answer self-check questions
+
 ### What You Will Learn
 
 - How indexers automate document ingestion from data sources
@@ -322,6 +332,11 @@ If you did not create an indexer, answer these self-check questions:
 ---
 
 ## Layer 3: AI Enrichment with Skillsets
+
+- [ ] Review built-in cognitive skills and their inputs/outputs
+- [ ] Understand skillset context and chaining
+- [ ] Review custom skills (WebApiSkill) schema
+- [ ] Answer self-check questions
 
 ### What You Will Learn
 
@@ -508,6 +523,11 @@ Answer these self-check questions:
 ---
 
 ## Layer 4: Advanced Query Syntax
+
+- [ ] Add `filter_expr` and `facets` parameters to `search_documents()`
+- [ ] Review simple vs full Lucene query syntax
+- [ ] Review OData filter expressions
+- [ ] Answer self-check questions
 
 ### What You Will Learn
 

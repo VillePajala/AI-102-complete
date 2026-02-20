@@ -256,6 +256,64 @@ This table maps each project module in the AI-102-complete repository to the exa
 
 ---
 
+## Practical Exam Tips from Labs
+
+These tips come from hands-on lab exercises. Each maps to a specific exam topic and represents the kind of practical detail the AI-102 exam tests.
+
+### Generative AI (Lab 01 + Lab 06)
+
+- **Temperature** controls randomness (0 = deterministic, 2 = max creative). **top_p** (nucleus sampling) is an alternative — Microsoft recommends changing one or the other, not both.
+- **max_tokens** limits the response length, not the prompt length. If the response is cut off mid-sentence, increase max_tokens.
+- **frequency_penalty** reduces repetition of tokens already used (proportional to count). **presence_penalty** reduces repetition of any token that has appeared at all (binary). Know the difference.
+- **DALL-E 3 supported sizes:** 1024x1024, 1024x1792, 1792x1024 only. Any other size fails.
+- **System messages** shape model behavior. Agents need: system instructions, tools, grounding data. The system role cannot be overridden by user messages (though prompt injection tries).
+- **AzureOpenAI client** (from the `openai` package) is the SDK for Azure OpenAI. It takes `azure_endpoint`, `api_key`, and `api_version`.
+
+### RAG and Search (Lab 02 + Lab 03)
+
+- **BM25 is the default ranking algorithm** for full-text search. It considers term frequency, inverse document frequency, and field length.
+- **upload_documents** creates or fully replaces. **merge_documents** updates only specified fields (fails if document doesn't exist). **merge_or_upload_documents** creates if new, merges if existing. The exam tests this distinction.
+- **Batch upload limit:** 1000 documents or 16 MB per batch.
+- **Key field must be `Edm.String`** and there is exactly one per index.
+- **SearchIndexClient** is for admin operations (create/delete indexes). **SearchClient** is for data operations (upload/search documents). Know which to use.
+- **Indexer = data source + index + optional skillset.** Know this formula.
+- **Built-in cognitive skills:** OCR, key phrase extraction, entity recognition, language detection, sentiment, image analysis, text split, text merge. Custom skills use the Web API skill interface.
+- **Knowledge Store projections:** table (for Power BI), object (for blob JSON), file (for blob images).
+- **Lucene query syntax:** `fieldName:value`, `AND`/`OR`/`NOT`, wildcards `*`/`?`, fuzzy `~`, proximity `"term1 term2"~N`.
+- **Vector search dimensions must match** between the embedding model output and the index field configuration. 1536 for `text-embedding-ada-002`, 3072 for `text-embedding-3-large`.
+- **Reciprocal Rank Fusion (RRF)** is how Azure AI Search merges keyword and vector results in hybrid mode.
+- **Semantic ranking requires Standard tier** (not Free). It is a re-ranker, not a search mode.
+- **RAG reduces hallucination** by grounding responses in retrieved documents. **Grounding** (RAG) is for dynamic data; **fine-tuning** is for teaching style/domain.
+- **Chunking:** overlap prevents information loss at boundaries. Azure AI Search has a built-in "split skill" for automatic chunking.
+
+### Computer Vision (Lab 04)
+
+- **VisualFeatureTypes:** `description` (captions), `tags` (content labels), `categories`, `objects` (with bounding boxes), `faces`, `brands`. Know which to use for each scenario.
+- **`analyze_image_in_stream()`** = binary data. **`analyze_image()`** = URL. The exam asks which method to use.
+- **Object detection returns pixel coordinates**, not percentages. Objects can be nested (e.g., "wheel" inside "car" via `.parent`).
+- **The Read API is asynchronous** — submit, get operation ID, poll until complete. You must pass `raw=True` to get response headers.
+- **Read API supports images (JPEG, PNG, BMP, TIFF) and multi-page PDFs** (up to 2000 pages).
+
+### Language and Speech (Lab 05)
+
+- **Sentiment labels:** `positive`, `neutral`, `negative`, `mixed`. Mixed appears when a document has both positive and negative sentences. Confidence scores always sum to 1.0.
+- **Opinion mining** (`show_opinion_mining=True`) returns aspect-level sentiment (e.g., "food was great but service was slow").
+- **Named entity recognition** (general: Person, Location, Organization) vs **PII entity recognition** (sensitive: SSN, email, credit card) are separate API calls. PII also returns `redacted_text`.
+- **Translator REST API requires `Ocp-Apim-Subscription-Region` header** when using a multi-service key. Omitting it causes 401. This is a frequent exam question.
+- **Multiple target languages** in one request: repeat the `to` parameter (`to=es&to=fr`).
+- **SSML structure:** `<speak>` root (with version and xmlns), `<voice>` (with name attribute), text content. Know `<prosody>` (speed/pitch), `<break>` (pauses), `<phoneme>` (pronunciation).
+- **`X-Microsoft-OutputFormat` header** controls TTS audio quality. Know common formats like `audio-16khz-128kbitrate-mono-mp3`.
+
+### Responsible AI (Lab 07)
+
+- **Four content safety categories:** Hate, SelfHarm, Sexual, Violence. Memorize these.
+- **Severity scale is 0-6**, not 0-10 or 0-100. 0 = safe, 1-2 = low, 3-4 = medium, 5-6 = high.
+- **Azure Content Safety** (standalone service, you call explicitly) vs **Azure OpenAI content filters** (built into Azure OpenAI, runs automatically on model I/O). Know when to use each.
+- **ContentSafetyClient** analyzes content. **BlocklistClient** manages custom blocklists (specific words/phrases to always flag).
+- **Prompt Shields** is a dedicated Content Safety feature that detects jailbreak and indirect prompt injection, separate from the four content categories.
+
+---
+
 ## Key MS Learn Links
 
 ### General Certification Resources

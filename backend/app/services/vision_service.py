@@ -24,7 +24,10 @@ def analyze_image(image_bytes: bytes) -> dict:
     Called by: vision.router /api/vision/analyze
     Returns: Dict with keys like "caption", "tags", "objects".
     """
-    raise NotImplementedError("See docs/labs/04-vision.md — Layer 1")
+    raise NotImplementedError(
+        "See docs/labs/04-vision.md — Layer 1. "
+        "Hint: from azure.cognitiveservices.vision.computervision import ComputerVisionClient"
+    )
 
 
 # === LAYER 2: Object Detection (Lab 04, Layer 2) ===
@@ -44,4 +47,7 @@ def ocr_image(image_bytes: bytes) -> dict:
     Called by: vision.router /api/vision/ocr
     Returns: Dict with key "text" containing a list of extracted lines.
     """
-    raise NotImplementedError("See docs/labs/04-vision.md — Layer 3")
+    raise NotImplementedError(
+        "See docs/labs/04-vision.md — Layer 3. "
+        "Hint: client.read_in_stream(stream, raw=True) + poll with get_read_result()"
+    )

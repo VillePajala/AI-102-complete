@@ -3,6 +3,7 @@
 > **Exam Domain:** D2 — Implement generative AI solutions (15-20%)
 > **Service File:** `backend/app/services/openai_service.py`
 > **Estimated Time:** 45 minutes
+> **Estimated Azure Cost:** < $0.10 for this lab. GPT-4o-mini is ~$0.15/$0.60 per 1M input/output tokens. DALL-E 3 is ~$0.04 per image (standard quality). Free tier Azure OpenAI has no monthly fee — you only pay per API call.
 
 ## Overview
 
@@ -47,6 +48,12 @@ The double-lined box is the service file you will implement. Everything else is 
 ## Azure Setup
 
 If you have not yet created your Azure OpenAI resource and deployments, follow these steps.
+
+- [ ] Create Azure OpenAI resource in Azure Portal
+- [ ] Deploy gpt-4o-mini in Azure AI Foundry
+- [ ] Deploy dall-e-3 in Azure AI Foundry
+- [ ] Configure `backend/.env` with keys and endpoints
+- [ ] Restart backend server
 
 ### 1. Create an Azure OpenAI resource (Azure Portal)
 
@@ -121,6 +128,10 @@ Restart the backend server after editing `.env`.
 ---
 
 ## Layer 1: Chat Completion
+
+- [ ] Implement `_get_client()` helper function
+- [ ] Implement `chat_completion()` function
+- [ ] Test via frontend or Swagger UI
 
 > **What you will learn**
 > - How to create an Azure OpenAI client using the `openai` Python SDK
@@ -283,6 +294,9 @@ Note: This minimal version does not pass the tuning parameters yet. That is Laye
 
 ## Layer 2: Parameter Tuning
 
+- [ ] Add all tuning parameters to `chat_completion()` API call
+- [ ] Test with different temperature/max_tokens values
+
 > **What you will learn**
 > - What each chat completion parameter controls
 > - How to pass tuning parameters through to the API
@@ -388,6 +402,9 @@ def chat_completion(
 ---
 
 ## Layer 3: DALL-E Image Generation
+
+- [ ] Implement `generate_image()` function
+- [ ] Test via frontend or Swagger UI
 
 > **What you will learn**
 > - How to use the Images API to generate images from text prompts

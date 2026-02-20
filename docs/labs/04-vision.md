@@ -1,6 +1,7 @@
 # Lab 04: Vision Lab
 
 > Exam domain: D4 — Implement computer vision solutions (10-15%) | Service file: `backend/app/services/vision_service.py` | Estimated time: 45 minutes
+> **Estimated Azure cost:** < $0.10. Azure AI Services Standard S0 charges ~$1 per 1,000 image analysis transactions. This lab typically uses 5-20 images.
 
 ## Overview
 
@@ -16,6 +17,10 @@ The frontend Vision Lab page (`/vision`) is already built. The backend router (`
 
 ## Azure Setup
 
+- [ ] Create Azure AI Services multi-service resource (or reuse existing)
+- [ ] Configure `backend/.env` with endpoint and key
+- [ ] Restart backend server
+
 1. Go to the [Azure Portal](https://portal.azure.com) and search for **Azure AI Services**.
 2. Click **Create** and select **Azure AI Services multi-service account** (this gives you access to Vision, Language, Speech, and more with a single key).
 3. Choose your subscription, create or select a resource group, pick a region, and choose the **Standard S0** pricing tier.
@@ -28,9 +33,23 @@ The frontend Vision Lab page (`/vision`) is already built. The backend router (`
    ```
 7. Restart the backend server so it picks up the new environment variables.
 
+**Where to find each value:**
+
+| Variable | Where to Find It |
+|----------|-----------------|
+| `AZURE_AI_SERVICES_ENDPOINT` | Azure Portal → your AI Services resource → **Keys and Endpoint** → **Endpoint** |
+| `AZURE_AI_SERVICES_KEY` | Azure Portal → your AI Services resource → **Keys and Endpoint** → **Key 1** (or Key 2) |
+
+> **Tip:** If you already set these variables in Lab 05 (Language & Speech), you can reuse the same resource and key. The multi-service resource covers Vision, Language, Speech, and more.
+
 ---
 
 ## Layer 1: Image Analysis
+
+- [ ] Add SDK imports to `vision_service.py`
+- [ ] Implement `_get_client()` helper
+- [ ] Implement `analyze_image()` with description and tags
+- [ ] Test via frontend or Swagger UI
 
 ### What You Will Learn
 
@@ -156,6 +175,10 @@ def analyze_image(image_bytes: bytes) -> dict:
 
 ## Layer 2: Object Detection
 
+- [ ] Add `VisualFeatureTypes.objects` to `analyze_image()`
+- [ ] Parse bounding box data from response
+- [ ] Test with image containing multiple objects
+
 ### What You Will Learn
 
 - How to add `VisualFeatureTypes.objects` to an existing analysis call
@@ -265,6 +288,10 @@ def analyze_image(image_bytes: bytes) -> dict:
 ---
 
 ## Layer 3: OCR with the Read API
+
+- [ ] Implement `ocr_image()` with async Read API
+- [ ] Implement polling loop for operation completion
+- [ ] Test with image containing text
 
 ### What You Will Learn
 

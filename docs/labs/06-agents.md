@@ -1,6 +1,7 @@
 # Lab 06: Agent Workshop
 
 > Exam domain: D3 — Implement agentic AI solutions (5-10%) | Service file: `backend/app/services/openai_service.py` | Estimated time: 35 minutes
+> **Estimated Azure cost:** < $0.05. Reuses the Azure OpenAI resource from Lab 01 — no new resources needed. Tool-augmented chat uses the same GPT deployment.
 
 ## Overview
 
@@ -34,11 +35,19 @@ No new Azure resources or environment variables are needed for this lab.
 
 ## Azure Setup
 
+- [ ] Verify Lab 01 Azure OpenAI resource is working
+- [ ] No new Azure resources needed
+
 No additional Azure setup is required. This lab reuses the Azure OpenAI resource you created in Lab 01.
 
 ---
 
 ## Layer 1: System Instructions
+
+- [ ] Build system message with instructions and tool list
+- [ ] Call Chat Completions API with system message
+- [ ] Return result as dict with "message" and "tool_calls" keys
+- [ ] Test via frontend or Swagger UI
 
 ### What You Will Learn
 
@@ -209,6 +218,11 @@ Note: This Layer 1 version returns an empty tool calls list. Layer 2 adds the pa
 ---
 
 ## Layer 2: Simulated Tool Calls
+
+- [ ] Add regex parsing for `[TOOL: ...]` patterns
+- [ ] Build tool_calls list from parsed matches
+- [ ] Clean tool patterns from display content
+- [ ] Test with prompts that trigger tool usage
 
 ### What You Will Learn
 
@@ -397,6 +411,10 @@ def chat_with_tools(
 ---
 
 ## Layer 3: Grounding with Knowledge Sources
+
+- [ ] Review grounding concepts (RAG, code interpreter, function calling)
+- [ ] Understand Foundry Agent Service capabilities
+- [ ] Answer self-check questions
 
 ### What You Will Learn
 

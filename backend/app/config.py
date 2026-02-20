@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     AZURE_OPENAI_KEY: str = ""
     AZURE_OPENAI_DEPLOYMENT: str = ""
     AZURE_OPENAI_DALLE_DEPLOYMENT: str = "dall-e-3"
-    AZURE_OPENAI_API_VERSION: str = "2024-06-01"
+    AZURE_OPENAI_API_VERSION: str = "2024-10-21"
 
     # Azure AI Services (Computer Vision, etc.)
     AZURE_AI_SERVICES_ENDPOINT: str = ""

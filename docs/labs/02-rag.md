@@ -3,6 +3,7 @@
 > **Exam domains:** D2 — Implement generative AI solutions (15-20%) + D6 — Knowledge mining (15-20%)
 > **Service file:** `backend/app/services/search_service.py`
 > **Estimated time:** 90-120 minutes
+> **Estimated Azure cost:** $0 if using the **Free (F)** tier for Azure AI Search. The Free tier allows 3 indexes and 50 MB storage — plenty for this lab. Azure OpenAI costs from Lab 01 apply for the RAG chat in Layer 6 (a few cents).
 
 ## Overview
 
@@ -35,6 +36,11 @@ By the end, you will have a working RAG pipeline: upload documents, search them,
 
 ## Azure Setup
 
+- [ ] Create Azure AI Search resource
+- [ ] Create search index (`ai102-index`) in portal
+- [ ] Configure `backend/.env` with search endpoint and key
+- [ ] Restart backend server
+
 1. Go to the [Azure Portal](https://portal.azure.com)
 2. Create a resource > search for **"Azure AI Search"**
 3. Select **Create**:
@@ -53,9 +59,20 @@ AZURE_SEARCH_KEY=your-primary-admin-key
 AZURE_SEARCH_INDEX=ai102-index
 ```
 
+**Where to find each value:**
+
+| Variable | Where to Find It |
+|----------|-----------------|
+| `AZURE_SEARCH_ENDPOINT` | Azure Portal → your AI Search resource → **Overview** → **Url** |
+| `AZURE_SEARCH_KEY` | Azure Portal → your AI Search resource → **Settings** → **Keys** → **Primary admin key** |
+| `AZURE_SEARCH_INDEX` | You choose this name when creating the index in Layer 1 (default: `ai102-index`) |
+
 ---
 
 ## Layer 1: Create a Search Index (Azure Portal)
+
+- [ ] Create index with required fields in Azure Portal
+- [ ] Verify index exists with 0 documents
 
 ### What You Will Learn
 
@@ -117,6 +134,11 @@ You can also test via the backend Swagger UI at `http://localhost:8000/docs` —
 ---
 
 ## Layer 2: Upload Documents
+
+- [ ] Add SDK imports to `search_service.py`
+- [ ] Implement `_get_search_client()` helper
+- [ ] Implement `upload_document()` function
+- [ ] Test upload via frontend or Swagger UI
 
 ### What You Will Learn
 
@@ -229,6 +251,9 @@ def upload_document(filename: str, content: str) -> None:
 ---
 
 ## Layer 3: Basic Search
+
+- [ ] Implement `search_documents()` function
+- [ ] Test search via frontend or Swagger UI
 
 ### What You Will Learn
 
@@ -343,6 +368,10 @@ def search_documents(query: str) -> list[dict]:
 ---
 
 ## Layer 4: Chunking Strategy
+
+- [ ] Add `_chunk_text()` helper function
+- [ ] Enhance `upload_document()` with chunking logic
+- [ ] Test with a large document
 
 ### What You Will Learn
 
@@ -467,6 +496,9 @@ def upload_document(filename: str, content: str) -> None:
 
 ## Layer 5: Vector Search (Conceptual)
 
+- [ ] Review vector search concepts
+- [ ] Answer self-check questions
+
 ### What You Will Learn
 
 - What vector embeddings are and how they differ from keyword search
@@ -565,6 +597,10 @@ No code test for this layer. Instead, answer these self-check questions:
 ---
 
 ## Layer 6: Grounded Chat (RAG)
+
+- [ ] Verify RAG toggle works on `/generative` page
+- [ ] Test grounded response with uploaded documents
+- [ ] Test unrelated question — model should say context is insufficient
 
 ### What You Will Learn
 

@@ -1,6 +1,7 @@
 # Lab 07: Responsible AI
 
 > Exam domain: D1 — Plan and manage an Azure AI solution (20-25%) | Service file: `backend/app/services/safety_service.py` | Estimated time: 30 minutes
+> **Estimated Azure cost:** $0 with the **Free (F0)** tier (5,000 transactions/month). Standard tier charges ~$1 per 1,000 text records. This lab uses ~10-30 API calls during testing.
 
 ## Overview
 
@@ -25,6 +26,10 @@ Responsible AI is not an isolated topic on the AI-102 exam — it is woven into 
 
 ## Azure Setup
 
+- [ ] Create Azure Content Safety resource
+- [ ] Configure `backend/.env` with Content Safety endpoint and key
+- [ ] Restart backend server
+
 ### 1. Create an Azure Content Safety resource
 
 1. Go to the [Azure Portal](https://portal.azure.com)
@@ -48,11 +53,23 @@ AZURE_CONTENT_SAFETY_ENDPOINT=https://your-content-safety.cognitiveservices.azur
 AZURE_CONTENT_SAFETY_KEY=your-key-here
 ```
 
+**Where to find each value:**
+
+| Variable | Where to Find It |
+|----------|-----------------|
+| `AZURE_CONTENT_SAFETY_ENDPOINT` | Azure Portal → your Content Safety resource → **Keys and Endpoint** → **Endpoint** |
+| `AZURE_CONTENT_SAFETY_KEY` | Azure Portal → your Content Safety resource → **Keys and Endpoint** → **Key 1** (or Key 2) |
+
 Restart the backend server after editing `.env`.
 
 ---
 
 ## Layer 1: Content Safety Analysis
+
+- [ ] Add SDK imports to `safety_service.py`
+- [ ] Implement `_get_client()` helper
+- [ ] Implement `analyze_text()` with four safety categories
+- [ ] Test via frontend or Swagger UI
 
 ### What You Will Learn
 
@@ -254,6 +271,10 @@ def analyze_text(text: str) -> dict:
 
 ## Layer 2: Severity Levels
 
+- [ ] Implement `_severity_label()` helper function
+- [ ] Update `analyze_text()` to use human-readable labels
+- [ ] Test -- verify labels show "Safe" instead of "0"
+
 ### What You Will Learn
 
 - The Content Safety severity scale and what each level means
@@ -385,6 +406,10 @@ def analyze_text(text: str) -> dict:
 ---
 
 ## Layer 3: Prompt Shield
+
+- [ ] Implement `check_prompt()` with severity threshold logic
+- [ ] Test with safe prompts -- should return `flagged: false`
+- [ ] Test with harmful content -- should return `flagged: true`
 
 ### What You Will Learn
 

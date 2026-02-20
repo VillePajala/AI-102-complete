@@ -26,12 +26,15 @@ def upload_document(filename: str, content: str) -> None:
         filename: Name of the document file.
         content: Text content of the document.
     """
-    raise NotImplementedError("See docs/labs/02-rag.md — Layer 2")
+    raise NotImplementedError(
+        "See docs/labs/02-rag.md — Layer 2. "
+        "Hint: from azure.search.documents import SearchClient"
+    )
 
 
-# === LAYER 2: Search Query (Lab 02, Layer 1) ===
+# === LAYER 2: Search Query (Lab 02, Layer 3) ===
 # TODO: Create a SearchClient and call client.search with text queries
-# See docs/labs/02-rag.md — Layer 1
+# See docs/labs/02-rag.md — Layer 3
 
 
 def search_documents(query: str) -> list[dict]:
@@ -42,4 +45,7 @@ def search_documents(query: str) -> list[dict]:
         query: The search query string.
     Returns: List of dicts with keys: content, score, source, highlights, metadata.
     """
-    raise NotImplementedError("See docs/labs/02-rag.md — Layer 1")
+    raise NotImplementedError(
+        "See docs/labs/02-rag.md — Layer 3. "
+        "Hint: client.search(search_text=query, top=10, highlight_fields='content')"
+    )
