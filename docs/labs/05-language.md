@@ -709,6 +709,171 @@ After completing all four layers, your `language_service.py` should have:
 
 Verify by testing all four endpoints through the frontend (`/language`) and the Swagger UI (`http://localhost:8000/docs`).
 
+<details><summary>Complete language_service.py</summary>
+
+```python
+import base64
+import logging
+import uuid
+
+import httpx
+from azure.ai.textanalytics import TextAnalyticsClient
+from azure.core.credentials import AzureKeyCredential
+
+from app.config import settings
+
+logger = logging.getLogger(__name__)
+
+
+def _get_text_client() -> TextAnalyticsClient:
+    if not settings.AZURE_AI_SERVICES_ENDPOINT or not settings.AZURE_AI_SERVICES_KEY:
+        raise RuntimeError(
+            "Azure AI Services not configured. "
+            "Set AZURE_AI_SERVICES_ENDPOINT and AZURE_AI_SERVICES_KEY."
+        )
+    return TextAnalyticsClient(
+        endpoint=settings.AZURE_AI_SERVICES_ENDPOINT,
+        credential=AzureKeyCredential(settings.AZURE_AI_SERVICES_KEY),
+    )
+
+
+def analyze_text(text: str, analysis_type: str = "all") -> dict:
+    client = _get_text_client()
+    documents = [text]
+    result: dict = {}
+
+    if analysis_type in ("all", "sentiment"):
+        response = client.analyze_sentiment(documents=documents)[0]
+        if not response.is_error:
+            result["sentiment"] = {
+                "label": response.sentiment,
+                "scores": {
+                    "positive": response.confidence_scores.positive,
+                    "neutral": response.confidence_scores.neutral,
+                    "negative": response.confidence_scores.negative,
+                },
+            }
+
+    if analysis_type in ("all", "keyPhrases"):
+        response = client.extract_key_phrases(documents=documents)[0]
+        if not response.is_error:
+            result["keyPhrases"] = list(response.key_phrases)
+
+    if analysis_type in ("all", "entities"):
+        response = client.recognize_entities(documents=documents)[0]
+        if not response.is_error:
+            result["entities"] = [
+                {
+                    "text": entity.text,
+                    "category": entity.category,
+                    "confidence": entity.confidence_score,
+                }
+                for entity in response.entities
+            ]
+
+    if analysis_type in ("all", "pii"):
+        response = client.recognize_pii_entities(documents=documents)[0]
+        if not response.is_error:
+            result["piiEntities"] = [
+                {"text": entity.text, "category": entity.category}
+                for entity in response.entities
+            ]
+
+    if analysis_type in ("all", "language"):
+        response = client.detect_language(documents=documents)[0]
+        if not response.is_error:
+            result["language"] = {
+                "name": response.primary_language.name,
+                "iso": response.primary_language.iso6391_name,
+                "confidence": response.primary_language.confidence_score,
+            }
+
+    return result
+
+
+def translate_text(text: str, source: str, target: str) -> str:
+    key = settings.AZURE_TRANSLATOR_KEY or settings.AZURE_AI_SERVICES_KEY
+    region = settings.AZURE_TRANSLATOR_REGION or settings.AZURE_SPEECH_REGION
+    if not key:
+        raise RuntimeError(
+            "Azure Translator not configured. "
+            "Set AZURE_TRANSLATOR_KEY or AZURE_AI_SERVICES_KEY."
+        )
+    endpoint = "https://api.cognitive.microsofttranslator.com"
+    path = "/translate"
+    params: dict = {"api-version": "3.0", "to": target}
+    if source and source != "auto":
+        params["from"] = source
+    headers = {
+        "Ocp-Apim-Subscription-Key": key,
+        "Ocp-Apim-Subscription-Region": region,
+        "Content-type": "application/json",
+        "X-ClientTraceId": str(uuid.uuid4()),
+    }
+    body = [{"text": text}]
+    response = httpx.post(
+        f"{endpoint}{path}", params=params, headers=headers, json=body, timeout=30
+    )
+    response.raise_for_status()
+    data = response.json()
+    return data[0]["translations"][0]["text"]
+
+
+def speech_to_text(audio_bytes: bytes) -> str:
+    if not settings.AZURE_SPEECH_KEY or not settings.AZURE_SPEECH_REGION:
+        raise RuntimeError(
+            "Azure Speech not configured. "
+            "Set AZURE_SPEECH_KEY and AZURE_SPEECH_REGION."
+        )
+    url = (
+        f"https://{settings.AZURE_SPEECH_REGION}.stt.speech.microsoft.com"
+        "/speech/recognition/conversation/cognitiveservices/v1"
+    )
+    headers = {
+        "Ocp-Apim-Subscription-Key": settings.AZURE_SPEECH_KEY,
+        "Content-Type": "audio/wav",
+        "Accept": "application/json",
+    }
+    params = {"language": "en-US"}
+    response = httpx.post(
+        url, headers=headers, params=params, content=audio_bytes, timeout=30
+    )
+    response.raise_for_status()
+    data = response.json()
+    return data.get("DisplayText", "")
+
+
+def text_to_speech(text: str) -> str:
+    if not settings.AZURE_SPEECH_KEY or not settings.AZURE_SPEECH_REGION:
+        raise RuntimeError(
+            "Azure Speech not configured. "
+            "Set AZURE_SPEECH_KEY and AZURE_SPEECH_REGION."
+        )
+    url = (
+        f"https://{settings.AZURE_SPEECH_REGION}.tts.speech.microsoft.com"
+        "/cognitiveservices/v1"
+    )
+    headers = {
+        "Ocp-Apim-Subscription-Key": settings.AZURE_SPEECH_KEY,
+        "Content-Type": "application/ssml+xml",
+        "X-Microsoft-OutputFormat": "audio-16khz-128kbitrate-mono-mp3",
+    }
+    ssml = (
+        '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">'
+        '<voice name="en-US-JennyNeural">'
+        f"{text}"
+        "</voice></speak>"
+    )
+    response = httpx.post(
+        url, headers=headers, content=ssml.encode("utf-8"), timeout=30
+    )
+    response.raise_for_status()
+    audio_b64 = base64.b64encode(response.content).decode("utf-8")
+    return f"data:audio/mp3;base64,{audio_b64}"
+```
+
+</details>
+
 ## Next Lab
 
 Continue to [Lab 06: Agent Workshop](06-agents.md) to build an AI agent with tool-calling capabilities — or jump to any other lab you have not completed yet. See the [lab index](README.md) for the full list.

@@ -34,14 +34,14 @@ class AgentChatResponse(BaseModel):
 @router.post("/chat", response_model=AgentChatResponse)
 async def agent_chat(req: AgentChatRequest):
     try:
-        message, tool_calls = openai_service.chat_with_tools(
+        result = openai_service.chat_with_tools(
             messages=req.messages,
             system_instructions=req.agent_config.instructions,
             tools=req.agent_config.tools,
         )
         return AgentChatResponse(
-            message=message,
-            tool_calls=[ToolCall(**tc) for tc in tool_calls] if tool_calls else None,
+            message=result["message"],
+            tool_calls=[ToolCall(**tc) for tc in result["tool_calls"]] if result["tool_calls"] else None,
         )
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))

@@ -714,6 +714,76 @@ At this point you should understand:
 3. OData filter syntax
 4. The difference between simple and full Lucene query syntax
 
+<details><summary>Complete search_service.py (after Lab 03 — same as Lab 02, this lab is conceptual)</summary>
+
+Lab 03 is primarily conceptual. The service file is the same as after Lab 02. If you enhanced `search_documents()` with filter or facet support in Layer 4, your version may differ.
+
+```python
+import logging
+
+from azure.core.credentials import AzureKeyCredential
+from azure.search.documents import SearchClient
+
+from app.config import settings
+
+logger = logging.getLogger(__name__)
+
+
+def _get_search_client() -> SearchClient:
+    if not settings.AZURE_SEARCH_ENDPOINT or not settings.AZURE_SEARCH_KEY:
+        raise RuntimeError(
+            "Azure AI Search not configured. "
+            "Set AZURE_SEARCH_ENDPOINT and AZURE_SEARCH_KEY."
+        )
+    return SearchClient(
+        endpoint=settings.AZURE_SEARCH_ENDPOINT,
+        index_name=settings.AZURE_SEARCH_INDEX,
+        credential=AzureKeyCredential(settings.AZURE_SEARCH_KEY),
+    )
+
+
+def upload_document(filename: str, content: str) -> None:
+    client = _get_search_client()
+    doc = {
+        "id": filename.replace(" ", "_").replace(".", "_"),
+        "content": content,
+        "source": filename,
+        "title": filename,
+    }
+    client.upload_documents(documents=[doc])
+
+
+def search_documents(query: str) -> list[dict]:
+    client = _get_search_client()
+    results = client.search(
+        search_text=query,
+        top=10,
+        include_total_count=True,
+        highlight_fields="content",
+    )
+    items = []
+    for result in results:
+        item: dict = {
+            "content": result.get("content", ""),
+            "score": result.get("@search.score", 0.0),
+        }
+        if result.get("source"):
+            item["source"] = result["source"]
+        highlights = result.get("@search.highlights", {})
+        if highlights and "content" in highlights:
+            item["highlights"] = highlights["content"]
+        metadata = {}
+        for key in ("title", "category", "source"):
+            if result.get(key):
+                metadata[key] = result[key]
+        if metadata:
+            item["metadata"] = metadata
+        items.append(item)
+    return items
+```
+
+</details>
+
 ## Next Lab
 
 Continue to **[Lab 04: Vision Lab](04-vision.md)** to implement computer vision with Azure AI Vision — image analysis, object detection, and OCR. Lab 04 is independent of Labs 01-03, so you can start it at any time.

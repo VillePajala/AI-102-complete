@@ -1,6 +1,8 @@
 # Lab 01: GenAI Lab
 
-> Exam domain: D2 — Implement generative AI solutions (15-20%) | Service file: `backend/app/services/openai_service.py` | Estimated time: 45 minutes
+> **Exam Domain:** D2 — Implement generative AI solutions (15-20%)
+> **Service File:** `backend/app/services/openai_service.py`
+> **Estimated Time:** 45 minutes
 
 ## Overview
 
@@ -8,12 +10,30 @@ In this lab you connect the backend to Azure OpenAI and implement three layers o
 
 This is the first lab because Azure OpenAI is the backbone of multiple later labs (RAG, Agents). Everything you learn here carries forward.
 
-**What you will implement:**
+### Request Flow
+
+```
+                                                ┌─────────────────────┐
+                                                │   YOU BUILD THIS    │
+                                                └────────┬────────────┘
+                                                         │
+┌──────────┐     ┌──────────┐     ┌──────────┐     ╔════════════╗     ┌──────────────┐
+│ BROWSER  │     │ NEXT.JS  │     │  ROUTER  │     ║  SERVICE   ║     │ AZURE OPENAI │
+│          │ ──► │          │ ──► │          │ ──► ║            ║ ──► │              │
+│/generati…│     │ port 3000│     │generativ…│     ║openai_serv…║     │  GPT/DALL-E  │
+└──────────┘     └──────────┘     └──────────┘     ╚════════════╝     └──────────────┘
+                                                    ▲
+                                      Response flows back the same path
+```
+
+The double-lined box is the service file you will implement. Everything else is already wired up.
+
+### What You Will Build
 
 | Layer | Function | What It Does |
 |-------|----------|-------------|
 | 1 | `chat_completion()` | Send messages to GPT, get a response |
-| 2 | (enhance Layer 1) | Understand and apply parameter tuning |
+| 2 | *(enhance Layer 1)* | Understand and apply parameter tuning |
 | 3 | `generate_image()` | Generate images with DALL-E |
 
 ## Prerequisites
@@ -21,14 +41,16 @@ This is the first lab because Azure OpenAI is the backbone of multiple later lab
 - An active Azure subscription (free trial works)
 - An Azure OpenAI resource with a GPT model deployed (e.g., `gpt-4o`, `gpt-4o-mini`, or `gpt-35-turbo`)
 - A DALL-E 3 deployment in the same Azure OpenAI resource (for Layer 3)
-- Python virtual environment set up and `requirements.txt` installed (see `docs/labs/README.md`)
+- Python virtual environment set up and `requirements.txt` installed (see [Setup Guide](README.md))
 - Both frontend and backend servers running
 
 ## Azure Setup
 
 If you have not yet created your Azure OpenAI resource and deployments, follow these steps.
 
-### 1. Create an Azure OpenAI resource
+### 1. Create an Azure OpenAI resource (Azure Portal)
+
+You create the resource in the Azure Portal, where you manage subscriptions, resource groups, regions, and access keys. This is standard Azure resource management — a key skill tested under exam Domain 1 (Plan and manage).
 
 1. Go to the [Azure Portal](https://portal.azure.com)
 2. Click **Create a resource** and search for **Azure OpenAI**
@@ -41,32 +63,57 @@ If you have not yet created your Azure OpenAI resource and deployments, follow t
 4. Click **Review + create**, then **Create**
 5. Wait for deployment to complete, then click **Go to resource**
 
-### 2. Deploy a GPT model
+### 2. Deploy a GPT model (Azure AI Foundry)
 
-1. In your Azure OpenAI resource, go to **Model deployments** (or open [Azure AI Foundry](https://ai.azure.com))
-2. Click **Create new deployment**
-3. Select a model: `gpt-4o-mini` is recommended for labs (cheaper, fast, capable)
-4. Give the deployment a name (e.g., `gpt-4o-mini`) — this becomes your `AZURE_OPENAI_DEPLOYMENT` value
-5. Set tokens-per-minute rate limit as needed (default is fine for labs)
-6. Click **Create**
+Model deployments are managed in **Azure AI Foundry** (ai.azure.com), not in the Azure Portal resource page. The Azure Portal resource page has a **"Go to Azure AI Foundry portal"** link that takes you there.
 
-### 3. Deploy DALL-E 3
+> **Note:** Azure AI Foundry was rebranded to **Microsoft Foundry** in late 2025. The URL is still ai.azure.com. The portal has a **"New Foundry" toggle** at the top — these instructions follow the **classic** experience (toggle OFF), which is what current exam content references.
 
-1. Create another deployment in the same resource
-2. Select model: `dall-e-3`
-3. Deployment name: `dall-e-3` (this is the default in `config.py`)
-4. Click **Create**
+1. From your Azure OpenAI resource page in the Azure Portal, click **Go to Azure AI Foundry portal** (or go directly to [ai.azure.com](https://ai.azure.com))
+2. In Foundry, select your Azure OpenAI resource if prompted
+3. Go to **Deployments** in the left navigation (under "Shared resources")
+4. Click **+ Deploy model** (dropdown button) > **Deploy base model**
+5. Search for and select **gpt-4o-mini**, then click **Confirm**
+6. Configure the deployment:
+   - **Deployment name**: `gpt-4o-mini` — this becomes your `AZURE_OPENAI_DEPLOYMENT` value
+   - **Deployment type**: Global-Standard (default) is fine for labs
+   - **Tokens per Minute Rate Limit**: default is fine for labs
+7. Click **Deploy** and wait for the provisioning state to show **Succeeded**
+
+**Alternative path — via Model Catalog:** You can also go to **Model catalog** in the left navigation, search for `gpt-4o-mini`, click **Use this model**, and deploy from there. Both paths create the same deployment.
+
+> **Why two portals?** The Azure Portal is where you manage Azure resources (create, delete, configure access keys, set up networking, RBAC). Azure AI Foundry is where you manage AI-specific tasks (deploy models, test prompts, configure content filters). The resource lives in Azure; Foundry is the AI management layer on top. The exam tests both — resource management in the Portal and model management in Foundry.
+
+### 3. Deploy DALL-E 3 (Azure AI Foundry)
+
+Still in Azure AI Foundry, same workflow:
+
+1. Go to **Deployments** in the left navigation
+2. Click **+ Deploy model** > **Deploy base model**
+3. Search for and select **dall-e-3**, then click **Confirm**
+4. Deployment name: `dall-e-3` (this is the default in `config.py`)
+5. Click **Deploy**
+
+> **DALL-E 3 region availability** is more limited than text models. If `dall-e-3` does not appear in the model list, your Azure OpenAI resource may be in a region that does not support it. Sweden Central and East US are confirmed to support DALL-E 3. Check the [model availability table](https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models#model-summary-table-and-region-availability) if needed.
 
 ### 4. Configure your .env file
 
-From your Azure OpenAI resource's **Keys and Endpoint** page, copy the endpoint and one of the keys. Edit `backend/.env`:
+Edit `backend/.env` with the values below. Here is where to find each one:
+
+| Variable | Where to Find It |
+|----------|-----------------|
+| `AZURE_OPENAI_ENDPOINT` | **Azure Portal** > your Azure OpenAI resource > **Keys and Endpoint** page > copy the **Endpoint** URL |
+| `AZURE_OPENAI_KEY` | Same page > copy **Key 1** (or Key 2 — either works) |
+| `AZURE_OPENAI_DEPLOYMENT` | The deployment name you chose in Step 2 (e.g., `gpt-4o-mini`) |
+| `AZURE_OPENAI_DALLE_DEPLOYMENT` | The deployment name you chose in Step 3 (e.g., `dall-e-3`) |
+| `AZURE_OPENAI_API_VERSION` | Not found in the portal — this is a fixed API version string. Use `2024-10-21` (latest GA version supporting chat, DALL-E, and tool calling) |
 
 ```
 AZURE_OPENAI_ENDPOINT=https://your-resource-name.openai.azure.com/
 AZURE_OPENAI_KEY=your-key-here
 AZURE_OPENAI_DEPLOYMENT=gpt-4o-mini
 AZURE_OPENAI_DALLE_DEPLOYMENT=dall-e-3
-AZURE_OPENAI_API_VERSION=2024-06-01
+AZURE_OPENAI_API_VERSION=2024-10-21
 ```
 
 Restart the backend server after editing `.env`.
@@ -75,13 +122,12 @@ Restart the backend server after editing `.env`.
 
 ## Layer 1: Chat Completion
 
-### What You Will Learn
-
-- How to create an Azure OpenAI client using the `openai` Python SDK
-- How to call the Chat Completions API with a list of messages
-- How the SDK differentiates between standard OpenAI and Azure OpenAI
-
-These map directly to AI-102 exam objective: **"Implement solutions that use Azure OpenAI"** — specifically creating chat completions and configuring Azure-specific client parameters.
+> **What you will learn**
+> - How to create an Azure OpenAI client using the `openai` Python SDK
+> - How to call the Chat Completions API with a list of messages
+> - How the SDK differentiates between standard OpenAI and Azure OpenAI
+>
+> *Exam objective: "Implement solutions that use Azure OpenAI" — creating chat completions and configuring Azure-specific client parameters.*
 
 ### Concepts
 
@@ -120,9 +166,7 @@ Replace the `raise NotImplementedError(...)` line. Your implementation should:
 - Extract the content from the first choice in the response and return it as a string
 - Handle the case where content might be `None` by returning an empty string
 
-<details><summary>Hint</summary>
-
-Here is the skeleton. Fill in the parts marked `___`:
+<details><summary>Hint — skeleton code</summary>
 
 ```python
 from openai import AzureOpenAI
@@ -163,12 +207,13 @@ Key things to figure out:
 
 ### Test It
 
-1. Make sure both servers are running
-2. Open http://localhost:3000/generative in your browser
-3. Type a message in the chat input (e.g., "What is Azure OpenAI?")
-4. You should receive a response from GPT displayed in the chat
-
-If you see a 503 error, check that your `.env` values are correct and the backend was restarted. If you see a 500 error, check the backend terminal for the full error traceback.
+> 1. Make sure both servers are running
+> 2. Open **http://localhost:3000/generative** in your browser
+> 3. Type a message in the chat input (e.g., "What is Azure OpenAI?")
+> 4. You should receive a response from GPT displayed in the chat
+>
+> **503 error?** Check that your `.env` values are correct and the backend was restarted.
+> **500 error?** Check the backend terminal for the full error traceback.
 
 You can also test directly via Swagger UI at http://localhost:8000/docs — find the `POST /api/generative/chat` endpoint and send:
 
@@ -229,23 +274,21 @@ Note: This minimal version does not pass the tuning parameters yet. That is Laye
 
 </details>
 
-### Exam Tips
-
-- The exam tests whether you know the difference between `OpenAI` and `AzureOpenAI` client classes. Azure requires `azure_endpoint` and `api_version` — standard OpenAI does not.
-- You must know that the `model` parameter in Azure OpenAI refers to the **deployment name**, not the model name (e.g., `"gpt-4o-mini"` as a deployment name, not the underlying model ID).
-- The exam may ask about authentication methods. Azure OpenAI supports both API key and Microsoft Entra ID (Azure AD) token authentication. This lab uses API key; the exam may test both.
+> **Exam Tips**
+> - The exam tests whether you know the difference between `OpenAI` and `AzureOpenAI` client classes. Azure requires `azure_endpoint` and `api_version` — standard OpenAI does not.
+> - You must know that the `model` parameter in Azure OpenAI refers to the **deployment name**, not the model name (e.g., `"gpt-4o-mini"` as a deployment name, not the underlying model ID).
+> - The exam may ask about authentication methods. Azure OpenAI supports both API key and Microsoft Entra ID (Azure AD) token authentication. This lab uses API key; the exam may test both.
 
 ---
 
 ## Layer 2: Parameter Tuning
 
-### What You Will Learn
-
-- What each chat completion parameter controls
-- How to pass tuning parameters through to the API
-- How different parameter values affect response behavior
-
-This maps to AI-102 exam objective: **"Configure Azure OpenAI model parameters"** — understanding temperature, top_p, frequency_penalty, presence_penalty, and max_tokens.
+> **What you will learn**
+> - What each chat completion parameter controls
+> - How to pass tuning parameters through to the API
+> - How different parameter values affect response behavior
+>
+> *Exam objective: "Configure Azure OpenAI model parameters" — understanding temperature, top_p, frequency_penalty, presence_penalty, and max_tokens.*
 
 ### Concepts
 
@@ -253,13 +296,13 @@ The Chat Completions API accepts several parameters that control how the model g
 
 | Parameter | Range | Default | What It Controls |
 |-----------|-------|---------|-----------------|
-| `temperature` | 0.0 - 2.0 | 0.7 | Randomness. Lower = more deterministic, higher = more creative. At 0, the model almost always picks the most likely next token. |
-| `top_p` | 0.0 - 1.0 | 1.0 | Nucleus sampling. Only considers tokens whose cumulative probability reaches this threshold. 0.1 means only the top 10% probability mass is considered. |
-| `max_tokens` | 1 - model max | 800 | Maximum number of tokens in the response. Limits output length. Does not guarantee the model will use all of them. |
-| `frequency_penalty` | -2.0 - 2.0 | 0.0 | Penalizes tokens based on how often they have appeared so far. Positive values reduce repetition. |
-| `presence_penalty` | -2.0 - 2.0 | 0.0 | Penalizes tokens based on whether they have appeared at all (regardless of frequency). Positive values encourage topic diversity. |
+| `temperature` | 0.0–2.0 | 0.7 | Randomness. Lower = more deterministic, higher = more creative. At 0, the model almost always picks the most likely next token. |
+| `top_p` | 0.0–1.0 | 1.0 | Nucleus sampling. Only considers tokens whose cumulative probability reaches this threshold. 0.1 means only the top 10% probability mass is considered. |
+| `max_tokens` | 1–model max | 800 | Maximum number of tokens in the response. Limits output length. Does not guarantee the model will use all of them. |
+| `frequency_penalty` | -2.0–2.0 | 0.0 | Penalizes tokens based on how often they have appeared so far. Positive values reduce repetition. |
+| `presence_penalty` | -2.0–2.0 | 0.0 | Penalizes tokens based on whether they have appeared at all (regardless of frequency). Positive values encourage topic diversity. |
 
-**Important:** `temperature` and `top_p` both control randomness. Microsoft recommends changing one or the other, not both at the same time. The exam may test this.
+> **Important:** `temperature` and `top_p` both control randomness. Microsoft recommends changing one or the other, not both at the same time. The exam may test this.
 
 ### Implementation
 
@@ -267,7 +310,7 @@ This layer does not require a new function. You need to enhance your Layer 1 `ch
 
 Go back to your `chat_completion()` function and add the five parameters (`temperature`, `top_p`, `max_tokens`, `frequency_penalty`, `presence_penalty`) to the `client.chat.completions.create()` call.
 
-<details><summary>Hint</summary>
+<details><summary>Hint — what to add</summary>
 
 Your `create()` call should include all the parameters:
 
@@ -289,13 +332,15 @@ Each `___` maps directly to the function parameter with the same name.
 
 ### Test It
 
-1. Open http://localhost:3000/generative
-2. If the frontend has parameter controls (sliders or inputs), try these experiments:
-   - Set `temperature=0` and ask the same question twice — responses should be nearly identical
-   - Set `temperature=1.5` and ask the same question — responses should be more varied and creative
-   - Set `max_tokens=20` — responses will be cut short
-   - Set `frequency_penalty=1.5` — the model will avoid repeating itself
-3. You can also test via Swagger UI by adding parameters to the request body:
+> 1. Open **http://localhost:3000/generative**
+> 2. If the frontend has parameter controls (sliders or inputs), try these experiments:
+>    - **`temperature=0`** — ask the same question twice, responses should be nearly identical
+>    - **`temperature=1.5`** — ask the same question, responses should be more varied and creative
+>    - **`max_tokens=20`** — responses will be cut short
+>    - **`frequency_penalty=1.5`** — the model will avoid repeating itself
+> 3. Try the same prompt with different settings and compare the outputs
+
+You can also test via Swagger UI by adding parameters to the request body:
 
 ```json
 {
@@ -304,8 +349,6 @@ Each `___` maps directly to the function parameter with the same name.
   "max_tokens": 100
 }
 ```
-
-Try the same prompt with `temperature: 1.5` and compare the output.
 
 <details><summary>Full Solution</summary>
 
@@ -337,23 +380,21 @@ def chat_completion(
 
 </details>
 
-### Exam Tips
-
-- The exam will ask you to choose the right parameter for a given scenario. Example: "You need the model to produce consistent, reproducible output" — the answer is `temperature=0`.
-- Know that `temperature` and `top_p` should not both be modified at the same time. This is a common exam question distractor.
-- `max_tokens` limits the **response** length, not the prompt length. The prompt length is limited by the model's context window (e.g., 128k tokens for GPT-4o). The exam may test this distinction.
+> **Exam Tips**
+> - The exam will ask you to choose the right parameter for a given scenario. Example: "You need the model to produce consistent, reproducible output" — the answer is `temperature=0`.
+> - Know that `temperature` and `top_p` should not both be modified at the same time. This is a common exam question distractor.
+> - `max_tokens` limits the **response** length, not the prompt length. The prompt length is limited by the model's context window (e.g., 128k tokens for GPT-4o). The exam may test this distinction.
 
 ---
 
 ## Layer 3: DALL-E Image Generation
 
-### What You Will Learn
-
-- How to use the Images API to generate images from text prompts
-- How DALL-E deployments differ from chat model deployments
-- How to handle the image response (URL vs. base64)
-
-This maps to AI-102 exam objective: **"Generate images by using Azure OpenAI DALL-E"**.
+> **What you will learn**
+> - How to use the Images API to generate images from text prompts
+> - How DALL-E deployments differ from chat model deployments
+> - How to handle the image response (URL vs. base64)
+>
+> *Exam objective: "Generate images by using Azure OpenAI DALL-E"*
 
 ### Concepts
 
@@ -383,7 +424,7 @@ Open `backend/app/services/openai_service.py` and find the `generate_image()` fu
 3. Extracts the URL from the first item in the response data
 4. Returns the URL as a string
 
-<details><summary>Hint</summary>
+<details><summary>Hint — skeleton code</summary>
 
 ```python
 def generate_image(prompt: str) -> str:
@@ -405,11 +446,14 @@ Things to figure out:
 
 ### Test It
 
-1. Open http://localhost:3000/generative
-2. Find the image generation feature (separate from chat)
-3. Enter a prompt like "A futuristic city skyline at sunset, digital art"
-4. Wait 10-20 seconds — DALL-E takes longer than chat completions
-5. You should see a generated image displayed in the UI
+> 1. Open **http://localhost:3000/generative**
+> 2. Find the image generation feature (separate from chat)
+> 3. Enter a prompt like *"A futuristic city skyline at sunset, digital art"*
+> 4. Wait 10-20 seconds — DALL-E takes longer than chat completions
+> 5. You should see a generated image displayed in the UI
+>
+> **Content policy error?** Your prompt was filtered by Azure's content safety system. Try a different, clearly safe prompt.
+> **404 or deployment error?** Verify that `AZURE_OPENAI_DALLE_DEPLOYMENT` in your `.env` matches your actual deployment name.
 
 Via Swagger UI, send a `POST /api/generative/image`:
 
@@ -420,10 +464,6 @@ Via Swagger UI, send a `POST /api/generative/image`:
 ```
 
 The response will contain a `url` field with a link to the generated image.
-
-**Troubleshooting:**
-- If you get a content policy error, your prompt may have been filtered by Azure's content safety system. Try a different, clearly safe prompt.
-- If you get a 404 or deployment error, verify that `AZURE_OPENAI_DALLE_DEPLOYMENT` in your `.env` matches your actual DALL-E deployment name.
 
 <details><summary>Full Solution</summary>
 
@@ -441,11 +481,10 @@ def generate_image(prompt: str) -> str:
 
 </details>
 
-### Exam Tips
-
-- The exam distinguishes between DALL-E 2 and DALL-E 3 capabilities. DALL-E 3 supports `quality` (`"standard"` or `"hd"`) and `style` (`"vivid"` or `"natural"`) parameters. DALL-E 2 does not.
-- Know the supported image sizes. DALL-E 3: `1024x1024`, `1024x1792`, `1792x1024`. DALL-E 2: `256x256`, `512x512`, `1024x1024`.
-- Azure OpenAI image generation has built-in content filtering. The exam may ask about content policy violations and how to handle them (the API returns a specific error when a prompt is rejected).
+> **Exam Tips**
+> - The exam distinguishes between DALL-E 2 and DALL-E 3 capabilities. DALL-E 3 supports `quality` (`"standard"` or `"hd"`) and `style` (`"vivid"` or `"natural"`) parameters. DALL-E 2 does not.
+> - Know the supported image sizes. DALL-E 3: `1024x1024`, `1024x1792`, `1792x1024`. DALL-E 2: `256x256`, `512x512`, `1024x1024`.
+> - Azure OpenAI image generation has built-in content filtering. The exam may ask about content policy violations and how to handle them (the API returns a specific error when a prompt is rejected).
 
 ---
 
@@ -453,17 +492,89 @@ def generate_image(prompt: str) -> str:
 
 After completing all three layers, verify everything works:
 
-- [ ] **Chat works**: Go to `/generative`, send a message, get a response
-- [ ] **Parameters affect output**: Sending the same message with `temperature=0` produces consistent results; `temperature=1.5` produces varied results
-- [ ] **Image generation works**: Enter an image prompt, receive a generated image
-- [ ] **No errors in backend terminal**: The uvicorn output should show 200 status codes for `/api/generative/chat` and `/api/generative/image`
+- [ ] **Chat works** — Send a message on `/generative`, get a response
+- [ ] **Parameters affect output** — `temperature=0` produces consistent results; `temperature=1.5` produces varied results
+- [ ] **Image generation works** — Enter an image prompt, receive a generated image
+- [ ] **No errors in backend terminal** — Uvicorn output shows 200 status codes
 
 Your `openai_service.py` should now have three implemented pieces:
-1. `_get_client()` — helper that creates an `AzureOpenAI` client
-2. `chat_completion()` — sends messages with tuning parameters, returns response text
-3. `generate_image()` — generates an image from a prompt, returns the image URL
 
-The `chat_with_tools()` function should still raise `NotImplementedError` — that is implemented in Lab 06 (Agent Workshop).
+| Function | Status |
+|----------|--------|
+| `_get_client()` | Helper that creates an `AzureOpenAI` client |
+| `chat_completion()` | Sends messages with tuning parameters, returns response text |
+| `generate_image()` | Generates an image from a prompt, returns the image URL |
+| `chat_with_tools()` | Still raises `NotImplementedError` — implemented in [Lab 06](06-agents.md) |
+
+<details><summary>Complete openai_service.py (after Lab 01)</summary>
+
+```python
+import logging
+
+from openai import AzureOpenAI
+
+from app.config import settings
+
+logger = logging.getLogger(__name__)
+
+
+def _get_client() -> AzureOpenAI:
+    if not settings.AZURE_OPENAI_ENDPOINT or not settings.AZURE_OPENAI_KEY:
+        raise RuntimeError(
+            "Azure OpenAI not configured. "
+            "Set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_KEY."
+        )
+    return AzureOpenAI(
+        azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+        api_key=settings.AZURE_OPENAI_KEY,
+        api_version=settings.AZURE_OPENAI_API_VERSION,
+    )
+
+
+def chat_completion(
+    messages: list[dict],
+    model: str | None = None,
+    temperature: float = 0.7,
+    top_p: float = 1.0,
+    max_tokens: int = 800,
+    frequency_penalty: float = 0.0,
+    presence_penalty: float = 0.0,
+) -> str:
+    client = _get_client()
+    deployment = model if model else settings.AZURE_OPENAI_DEPLOYMENT
+    response = client.chat.completions.create(
+        model=deployment,
+        messages=messages,
+        temperature=temperature,
+        top_p=top_p,
+        max_tokens=max_tokens,
+        frequency_penalty=frequency_penalty,
+        presence_penalty=presence_penalty,
+    )
+    return response.choices[0].message.content or ""
+
+
+def generate_image(prompt: str) -> str:
+    client = _get_client()
+    response = client.images.generate(
+        model=settings.AZURE_OPENAI_DALLE_DEPLOYMENT,
+        prompt=prompt,
+        n=1,
+        size="1024x1024",
+    )
+    return response.data[0].url or ""
+
+
+# chat_with_tools() — not yet implemented (Lab 06)
+def chat_with_tools(
+    messages: list[dict],
+    system_instructions: str,
+    tools: list[str],
+) -> dict:
+    raise NotImplementedError("See docs/labs/06-agents.md — Layer 1")
+```
+
+</details>
 
 ## What You Learned
 
@@ -477,4 +588,4 @@ The `chat_with_tools()` function should still raise `NotImplementedError` — th
 
 ## Next Lab
 
-Continue to **[Lab 02: RAG Engine](02-rag.md)** where you will implement Azure AI Search integration and connect it to the chat completion function you just built, creating a retrieval-augmented generation pipeline.
+Continue to **[Lab 02: RAG Engine](02-rag.md)** — you will implement Azure AI Search integration and connect it to the chat completion function you just built, creating a retrieval-augmented generation pipeline.

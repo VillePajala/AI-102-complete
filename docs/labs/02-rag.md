@@ -686,6 +686,74 @@ At this point you should have:
 3. Go to `/generative`, enable RAG, ask about the topic — grounded answer with sources
 4. Ask about something unrelated — model says the context doesn't cover it
 
+<details><summary>Complete search_service.py (after Lab 02)</summary>
+
+```python
+import logging
+
+from azure.core.credentials import AzureKeyCredential
+from azure.search.documents import SearchClient
+
+from app.config import settings
+
+logger = logging.getLogger(__name__)
+
+
+def _get_search_client() -> SearchClient:
+    if not settings.AZURE_SEARCH_ENDPOINT or not settings.AZURE_SEARCH_KEY:
+        raise RuntimeError(
+            "Azure AI Search not configured. "
+            "Set AZURE_SEARCH_ENDPOINT and AZURE_SEARCH_KEY."
+        )
+    return SearchClient(
+        endpoint=settings.AZURE_SEARCH_ENDPOINT,
+        index_name=settings.AZURE_SEARCH_INDEX,
+        credential=AzureKeyCredential(settings.AZURE_SEARCH_KEY),
+    )
+
+
+def upload_document(filename: str, content: str) -> None:
+    client = _get_search_client()
+    doc = {
+        "id": filename.replace(" ", "_").replace(".", "_"),
+        "content": content,
+        "source": filename,
+        "title": filename,
+    }
+    client.upload_documents(documents=[doc])
+
+
+def search_documents(query: str) -> list[dict]:
+    client = _get_search_client()
+    results = client.search(
+        search_text=query,
+        top=10,
+        include_total_count=True,
+        highlight_fields="content",
+    )
+    items = []
+    for result in results:
+        item: dict = {
+            "content": result.get("content", ""),
+            "score": result.get("@search.score", 0.0),
+        }
+        if result.get("source"):
+            item["source"] = result["source"]
+        highlights = result.get("@search.highlights", {})
+        if highlights and "content" in highlights:
+            item["highlights"] = highlights["content"]
+        metadata = {}
+        for key in ("title", "category", "source"):
+            if result.get(key):
+                metadata[key] = result[key]
+        if metadata:
+            item["metadata"] = metadata
+        items.append(item)
+    return items
+```
+
+</details>
+
 ## Next Lab
 
 Continue to **[Lab 03: Knowledge Mining](03-knowledge-mining.md)** to learn about index management, indexers, AI enrichment skillsets, and advanced query syntax — all key AI-102 exam topics that build on the search foundation you just created.

@@ -61,7 +61,7 @@ The Agent Workshop frontend sends an `AgentConfig` that contains:
 The router (`agents.py`) calls your function like this:
 
 ```python
-message, tool_calls = openai_service.chat_with_tools(
+result = openai_service.chat_with_tools(
     messages=req.messages,
     system_instructions=req.agent_config.instructions,
     tools=req.agent_config.tools,
@@ -97,7 +97,7 @@ The format you should instruct the model to use when it would invoke a tool:
 
 **Step 3: Return the result**
 
-For Layer 1, return the response content as the first element of the tuple, and an empty list as the second element (tool call parsing comes in Layer 2).
+For Layer 1, return a dict with `"message"` set to the response content and `"tool_calls"` set to an empty list (tool call parsing comes in Layer 2).
 
 <details><summary>Hint</summary>
 
@@ -106,7 +106,7 @@ def chat_with_tools(
     messages: list[dict],
     system_instructions: str,
     tools: list[str],
-) -> tuple[str, list[dict]]:
+) -> dict:
     client = _get_client()
     deployment = settings.AZURE_OPENAI_DEPLOYMENT
 
@@ -128,7 +128,7 @@ def chat_with_tools(
     )
 
     content = response.choices[0].message.___ or ""
-    return content, []
+    return {"message": content, "tool_calls": []}
 ```
 
 Fill in the blanks:
@@ -171,7 +171,7 @@ def chat_with_tools(
     messages: list[dict],
     system_instructions: str,
     tools: list[str],
-) -> tuple[str, list[dict]]:
+) -> dict:
     client = _get_client()
     deployment = settings.AZURE_OPENAI_DEPLOYMENT
 
@@ -193,7 +193,7 @@ def chat_with_tools(
     )
 
     content = response.choices[0].message.content or ""
-    return content, []
+    return {"message": content, "tool_calls": []}
 ```
 
 Note: This Layer 1 version returns an empty tool calls list. Layer 2 adds the parsing.
@@ -224,10 +224,10 @@ In Layer 1, you instructed the model to format tool usage as `[TOOL: tool_name] 
 
 This is a simplified simulation of how real agents work. In production, Azure OpenAI supports native function calling where the API returns structured `tool_calls` objects in the response. However, understanding the pattern — agent decides to use a tool, invokes it, gets a result, incorporates the result — is what the exam tests.
 
-The router expects your function to return a tuple:
+The router expects your function to return a dict:
 
 ```python
-(clean_content: str, tool_calls: list[dict])
+{"message": "clean response text", "tool_calls": [list of tool call dicts]}
 ```
 
 Where each tool call dict has three keys:
@@ -281,7 +281,7 @@ clean_content = re.sub(
 if not clean_content:
     clean_content = content
 
-return clean_content, tool_calls
+return {"message": clean_content, "tool_calls": tool_calls}
 ```
 
 Things to figure out:
@@ -341,7 +341,7 @@ def chat_with_tools(
     messages: list[dict],
     system_instructions: str,
     tools: list[str],
-) -> tuple[str, list[dict]]:
+) -> dict:
     client = _get_client()
     deployment = settings.AZURE_OPENAI_DEPLOYMENT
 
@@ -383,7 +383,7 @@ def chat_with_tools(
     if not clean_content:
         clean_content = content
 
-    return clean_content, tool_calls
+    return {"message": clean_content, "tool_calls": tool_calls}
 ```
 
 </details>
@@ -500,6 +500,117 @@ Your `openai_service.py` should now have four implemented pieces:
 2. `chat_completion()` — sends messages with tuning parameters (from Lab 01)
 3. `generate_image()` — generates images with DALL-E (from Lab 01)
 4. `chat_with_tools()` — agent chat with system instructions and tool call parsing (this lab)
+
+<details><summary>Complete openai_service.py (after Lab 06 — all functions implemented)</summary>
+
+```python
+import logging
+import re
+
+from openai import AzureOpenAI
+
+from app.config import settings
+
+logger = logging.getLogger(__name__)
+
+
+def _get_client() -> AzureOpenAI:
+    if not settings.AZURE_OPENAI_ENDPOINT or not settings.AZURE_OPENAI_KEY:
+        raise RuntimeError(
+            "Azure OpenAI not configured. "
+            "Set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_KEY."
+        )
+    return AzureOpenAI(
+        azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+        api_key=settings.AZURE_OPENAI_KEY,
+        api_version=settings.AZURE_OPENAI_API_VERSION,
+    )
+
+
+def chat_completion(
+    messages: list[dict],
+    model: str | None = None,
+    temperature: float = 0.7,
+    top_p: float = 1.0,
+    max_tokens: int = 800,
+    frequency_penalty: float = 0.0,
+    presence_penalty: float = 0.0,
+) -> str:
+    client = _get_client()
+    deployment = model if model else settings.AZURE_OPENAI_DEPLOYMENT
+    response = client.chat.completions.create(
+        model=deployment,
+        messages=messages,
+        temperature=temperature,
+        top_p=top_p,
+        max_tokens=max_tokens,
+        frequency_penalty=frequency_penalty,
+        presence_penalty=presence_penalty,
+    )
+    return response.choices[0].message.content or ""
+
+
+def generate_image(prompt: str) -> str:
+    client = _get_client()
+    response = client.images.generate(
+        model=settings.AZURE_OPENAI_DALLE_DEPLOYMENT,
+        prompt=prompt,
+        n=1,
+        size="1024x1024",
+    )
+    return response.data[0].url or ""
+
+
+def chat_with_tools(
+    messages: list[dict],
+    system_instructions: str,
+    tools: list[str],
+) -> dict:
+    client = _get_client()
+    deployment = settings.AZURE_OPENAI_DEPLOYMENT
+
+    system_msg = {
+        "role": "system",
+        "content": (
+            f"{system_instructions}\n\n"
+            f"You have access to these tools: {', '.join(tools)}. "
+            "When you would use a tool, describe what tool you'd call "
+            "and what the result would be. "
+            "Format tool usage as: [TOOL: tool_name] Input: ... Result: ..."
+        ),
+    }
+
+    response = client.chat.completions.create(
+        model=deployment,
+        messages=[system_msg, *messages],
+        temperature=0.7,
+        max_tokens=1000,
+    )
+
+    content = response.choices[0].message.content or ""
+
+    tool_calls = []
+    for match in re.finditer(
+        r"\[TOOL:\s*(\w+)\]\s*Input:\s*(.*?)\s*Result:\s*(.*?)(?=\[TOOL:|$)",
+        content,
+        re.DOTALL,
+    ):
+        tool_calls.append({
+            "tool": match.group(1),
+            "input": match.group(2).strip(),
+            "output": match.group(3).strip(),
+        })
+
+    clean_content = re.sub(
+        r"\[TOOL:.*?\].*?(?=\[TOOL:|$)", "", content, flags=re.DOTALL
+    ).strip()
+    if not clean_content:
+        clean_content = content
+
+    return {"message": clean_content, "tool_calls": tool_calls}
+```
+
+</details>
 
 ## What You Learned
 

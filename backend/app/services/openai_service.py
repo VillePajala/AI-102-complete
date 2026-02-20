@@ -63,10 +63,10 @@ def chat_with_tools(
     messages: list[dict],
     system_instructions: str,
     tools: list[str],
-) -> tuple[str, list[dict]]:
+) -> dict:
     """Chat with simulated tool calls for the agent workshop.
 
     Called by: agents.router /api/agents/chat
-    Returns: Tuple of (response_text, list_of_tool_call_dicts).
+    Returns: Dict with "message" (str) and "tool_calls" (list of dicts).
     """
     raise NotImplementedError("See docs/labs/06-agents.md — Layer 1")

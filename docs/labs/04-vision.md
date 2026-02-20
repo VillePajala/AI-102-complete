@@ -437,6 +437,93 @@ After completing all three layers, your `vision_service.py` should have:
 
 Verify by testing both endpoints through the frontend (`/vision`) and the Swagger UI (`http://localhost:8000/docs`).
 
+<details><summary>Complete vision_service.py</summary>
+
+```python
+import io
+import logging
+import time
+
+from azure.cognitiveservices.vision.computervision import ComputerVisionClient
+from azure.cognitiveservices.vision.computervision.models import VisualFeatureTypes
+from msrest.authentication import CognitiveServicesCredentials
+
+from app.config import settings
+
+logger = logging.getLogger(__name__)
+
+
+def _get_client() -> ComputerVisionClient:
+    if not settings.AZURE_AI_SERVICES_ENDPOINT or not settings.AZURE_AI_SERVICES_KEY:
+        raise RuntimeError(
+            "Azure AI Services not configured. "
+            "Set AZURE_AI_SERVICES_ENDPOINT and AZURE_AI_SERVICES_KEY."
+        )
+    return ComputerVisionClient(
+        settings.AZURE_AI_SERVICES_ENDPOINT,
+        CognitiveServicesCredentials(settings.AZURE_AI_SERVICES_KEY),
+    )
+
+
+def analyze_image(image_bytes: bytes) -> dict:
+    client = _get_client()
+    stream = io.BytesIO(image_bytes)
+    analysis = client.analyze_image_in_stream(
+        stream,
+        visual_features=[
+            VisualFeatureTypes.description,
+            VisualFeatureTypes.tags,
+            VisualFeatureTypes.objects,
+        ],
+    )
+    result: dict = {}
+    if analysis.description:
+        if analysis.description.captions:
+            result["caption"] = analysis.description.captions[0].text
+        if analysis.description.tags:
+            result["description"] = ", ".join(analysis.description.tags)
+    if analysis.tags:
+        result["tags"] = [
+            tag.name for tag in analysis.tags if tag.confidence > 0.5
+        ]
+    if analysis.objects:
+        result["objects"] = [
+            {
+                "name": obj.object_property,
+                "confidence": obj.confidence,
+                "boundingBox": {
+                    "x": obj.rectangle.x,
+                    "y": obj.rectangle.y,
+                    "w": obj.rectangle.w,
+                    "h": obj.rectangle.h,
+                },
+            }
+            for obj in analysis.objects
+        ]
+    return result
+
+
+def ocr_image(image_bytes: bytes) -> dict:
+    client = _get_client()
+    stream = io.BytesIO(image_bytes)
+    read_response = client.read_in_stream(stream, raw=True)
+    operation_location = read_response.headers["Operation-Location"]
+    operation_id = operation_location.split("/")[-1]
+    for _ in range(30):
+        read_result = client.get_read_result(operation_id)
+        if read_result.status.lower() not in ("notstarted", "running"):
+            break
+        time.sleep(1)
+    lines: list[str] = []
+    if read_result.analyze_result and read_result.analyze_result.read_results:
+        for page in read_result.analyze_result.read_results:
+            for line in page.lines:
+                lines.append(line.text)
+    return {"text": lines}
+```
+
+</details>
+
 ## Next Lab
 
 Continue to [Lab 05: Language & Speech](05-language.md) to implement text analytics, translation, and speech services — or jump to any other independent lab.

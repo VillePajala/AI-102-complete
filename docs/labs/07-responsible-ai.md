@@ -557,6 +557,96 @@ Your `safety_service.py` should now have four implemented pieces:
 3. `analyze_text()` — analyzes text and returns categorized severity results
 4. `check_prompt()` — checks a prompt for harmful content and returns a flagged/unflagged verdict
 
+<details><summary>Complete safety_service.py</summary>
+
+```python
+import logging
+
+from azure.ai.contentsafety import ContentSafetyClient
+from azure.ai.contentsafety.models import AnalyzeTextOptions
+from azure.core.credentials import AzureKeyCredential
+
+from app.config import settings
+
+logger = logging.getLogger(__name__)
+
+
+def _get_client() -> ContentSafetyClient:
+    if not settings.AZURE_CONTENT_SAFETY_ENDPOINT or not settings.AZURE_CONTENT_SAFETY_KEY:
+        raise RuntimeError(
+            "Azure Content Safety not configured. "
+            "Set AZURE_CONTENT_SAFETY_ENDPOINT and AZURE_CONTENT_SAFETY_KEY."
+        )
+    return ContentSafetyClient(
+        endpoint=settings.AZURE_CONTENT_SAFETY_ENDPOINT,
+        credential=AzureKeyCredential(settings.AZURE_CONTENT_SAFETY_KEY),
+    )
+
+
+def _severity_label(severity: int) -> str:
+    if severity <= 0:
+        return "Safe"
+    if severity <= 2:
+        return "Low"
+    if severity <= 4:
+        return "Medium"
+    return "High"
+
+
+def analyze_text(text: str) -> dict:
+    client = _get_client()
+    request = AnalyzeTextOptions(text=text)
+    response = client.analyze_text(request)
+
+    categories = []
+    for cat_result in [
+        ("Hate", response.hate_result),
+        ("SelfHarm", response.self_harm_result),
+        ("Sexual", response.sexual_result),
+        ("Violence", response.violence_result),
+    ]:
+        name, result = cat_result
+        if result:
+            categories.append({
+                "name": name,
+                "severity": result.severity,
+                "label": _severity_label(result.severity),
+            })
+
+    return {"categories": categories}
+
+
+def check_prompt(prompt: str) -> dict:
+    client = _get_client()
+    request = AnalyzeTextOptions(text=prompt)
+    response = client.analyze_text(request)
+
+    max_severity = 0
+    flagged_categories = []
+    for cat_result in [
+        ("Hate", response.hate_result),
+        ("SelfHarm", response.self_harm_result),
+        ("Sexual", response.sexual_result),
+        ("Violence", response.violence_result),
+    ]:
+        name, result = cat_result
+        if result and result.severity > max_severity:
+            max_severity = result.severity
+        if result and result.severity > 2:
+            flagged_categories.append(name)
+
+    flagged = max_severity > 2
+    result: dict = {"flagged": flagged}
+    if flagged:
+        result["reason"] = (
+            f"Content flagged for: {', '.join(flagged_categories)} "
+            f"(severity {max_severity}/6)"
+        )
+    return result
+```
+
+</details>
+
 ## What You Learned
 
 | Concept | How You Used It | Exam Relevance |
