@@ -31,6 +31,10 @@ def chat_completion(
     Called by: generative.router /api/generative/chat
     Returns: The assistant message content as a string.
     """
+    if settings.DEMO_MODE:
+        from app.services.mock_data import mock_chat_completion
+
+        return mock_chat_completion()
     raise NotImplementedError(
         "See docs/labs/01-genai.md — Layer 1. "
         "Hint: from openai import AzureOpenAI"
@@ -54,6 +58,10 @@ def generate_image(prompt: str) -> str:
     Called by: generative.router /api/generative/image
     Returns: URL of the generated image.
     """
+    if settings.DEMO_MODE:
+        from app.services.mock_data import mock_generate_image
+
+        return mock_generate_image()
     raise NotImplementedError(
         "See docs/labs/01-genai.md — Layer 3. "
         "Hint: client.images.generate(model=settings.AZURE_OPENAI_DALLE_DEPLOYMENT, ...)"
@@ -75,6 +83,10 @@ def chat_with_tools(
     Called by: agents.router /api/agents/chat
     Returns: Dict with "message" (str) and "tool_calls" (list of dicts).
     """
+    if settings.DEMO_MODE:
+        from app.services.mock_data import mock_chat_with_tools
+
+        return mock_chat_with_tools()
     raise NotImplementedError(
         "See docs/labs/06-agents.md — Layer 1. "
         "Hint: reuse the AzureOpenAI client from chat_completion() with a system message"

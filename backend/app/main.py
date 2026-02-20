@@ -29,4 +29,6 @@ app.include_router(safety.router)
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy"}
+    from app.config import settings
+
+    return {"status": "healthy", "demo_mode": settings.DEMO_MODE}

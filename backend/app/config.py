@@ -2,6 +2,9 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    # Demo mode — return mock data without calling Azure
+    DEMO_MODE: bool = False
+
     # Azure OpenAI
     AZURE_OPENAI_ENDPOINT: str = ""
     AZURE_OPENAI_KEY: str = ""
