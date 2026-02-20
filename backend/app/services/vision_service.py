@@ -24,6 +24,10 @@ def analyze_image(image_bytes: bytes) -> dict:
     Called by: vision.router /api/vision/analyze
     Returns: Dict with keys like "caption", "tags", "objects".
     """
+    if settings.DEMO_MODE:
+        from app.services.mock_data import mock_analyze_image
+
+        return mock_analyze_image()
     raise NotImplementedError(
         "See docs/labs/04-vision.md — Layer 1. "
         "Hint: from azure.cognitiveservices.vision.computervision import ComputerVisionClient"
@@ -47,6 +51,10 @@ def ocr_image(image_bytes: bytes) -> dict:
     Called by: vision.router /api/vision/ocr
     Returns: Dict with key "text" containing a list of extracted lines.
     """
+    if settings.DEMO_MODE:
+        from app.services.mock_data import mock_ocr_image
+
+        return mock_ocr_image()
     raise NotImplementedError(
         "See docs/labs/04-vision.md — Layer 3. "
         "Hint: client.read_in_stream(stream, raw=True) + poll with get_read_result()"

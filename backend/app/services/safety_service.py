@@ -24,6 +24,10 @@ def analyze_text(text: str) -> dict:
     Called by: safety.router /api/safety/analyze-text
     Returns: Dict with "categories" list, each having name, severity (0-6), and label.
     """
+    if settings.DEMO_MODE:
+        from app.services.mock_data import mock_safety_analyze_text
+
+        return mock_safety_analyze_text()
     raise NotImplementedError(
         "See docs/labs/07-responsible-ai.md — Layer 1. "
         "Hint: from azure.ai.contentsafety import ContentSafetyClient"
@@ -46,6 +50,10 @@ def check_prompt(prompt: str) -> dict:
     Called by: safety.router /api/safety/check-prompt
     Returns: Dict with "flagged" (bool) and optionally "reason" (str).
     """
+    if settings.DEMO_MODE:
+        from app.services.mock_data import mock_check_prompt
+
+        return mock_check_prompt()
     raise NotImplementedError(
         "See docs/labs/07-responsible-ai.md — Layer 3. "
         "Hint: reuse _get_client() and AnalyzeTextOptions, then check severity > 2"

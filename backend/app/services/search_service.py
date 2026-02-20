@@ -26,6 +26,10 @@ def upload_document(filename: str, content: str) -> None:
         filename: Name of the document file.
         content: Text content of the document.
     """
+    if settings.DEMO_MODE:
+        from app.services.mock_data import mock_upload_document
+
+        return mock_upload_document()
     raise NotImplementedError(
         "See docs/labs/02-rag.md — Layer 2. "
         "Hint: from azure.search.documents import SearchClient"
@@ -45,6 +49,10 @@ def search_documents(query: str) -> list[dict]:
         query: The search query string.
     Returns: List of dicts with keys: content, score, source, highlights, metadata.
     """
+    if settings.DEMO_MODE:
+        from app.services.mock_data import mock_search_documents
+
+        return mock_search_documents()
     raise NotImplementedError(
         "See docs/labs/02-rag.md — Layer 3. "
         "Hint: client.search(search_text=query, top=10, highlight_fields='content')"
