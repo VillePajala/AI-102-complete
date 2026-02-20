@@ -560,6 +560,62 @@ def ocr_image(image_bytes: bytes) -> dict:
 
 </details>
 
+## Exam Quiz
+
+Test your understanding with these AI-102 style questions.
+
+**Q1.** You need to extract text from a scanned multi-page PDF using Azure Computer Vision. Which API should you use?
+
+A) `analyze_image_in_stream()` with `VisualFeatureTypes.description`
+B) The synchronous OCR endpoint
+C) The asynchronous Read API (`read_in_stream()`)
+D) `detect_objects_in_stream()`
+
+<details><summary>Answer</summary>
+
+**C) The asynchronous Read API** — The Read API handles multi-page documents (up to 2000 pages) and is the recommended approach for OCR. The synchronous OCR endpoint exists but is limited and not recommended for new code. `analyze_image_in_stream()` is for image analysis (captions, tags), not text extraction.
+
+</details>
+
+**Q2.** When using the Read API, you call `client.read_in_stream(stream, raw=True)`. Why is `raw=True` required?
+
+A) It returns the raw image bytes
+B) It enables access to response headers containing the operation location URL
+C) It disables content filtering
+D) It returns unprocessed text without formatting
+
+<details><summary>Answer</summary>
+
+**B) It enables access to response headers** — The Read API is asynchronous. The `Operation-Location` header contains the URL you need to poll for results. Without `raw=True`, the SDK does not expose the response headers and you cannot get the operation ID.
+
+</details>
+
+**Q3.** An image analysis response contains both `tags` and `objects`. What is the key difference between them?
+
+A) Tags are more accurate than objects
+B) Tags are image-level labels; objects include bounding box coordinates
+C) Objects are always a subset of tags
+D) Tags require a higher pricing tier
+
+<details><summary>Answer</summary>
+
+**B) Tags are image-level labels; objects include bounding box coordinates** — Tags tell you what the image contains overall (e.g., "outdoor", "dog"). Objects tell you where specific items are located in the image with pixel coordinates (x, y, width, height). They serve different purposes.
+
+</details>
+
+**Q4.** You need to analyze an image that is hosted at a public URL. Which Computer Vision SDK method should you use?
+
+A) `analyze_image_in_stream()` with the URL as bytes
+B) `analyze_image()` with the URL as a string
+C) `read_in_stream()` with the URL
+D) `describe_image_in_stream()`
+
+<details><summary>Answer</summary>
+
+**B) `analyze_image()` with the URL** — Methods ending in `_in_stream` accept binary data (file-like streams). Methods without `_in_stream` accept URLs. For a public URL, use `analyze_image(url, visual_features=[...])`.
+
+</details>
+
 ## Next Lab
 
 Continue to [Lab 05: Language & Speech](05-language.md) to implement text analytics, translation, and speech services — or jump to any other independent lab.

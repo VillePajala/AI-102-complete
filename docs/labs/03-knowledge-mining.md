@@ -813,6 +813,75 @@ def search_documents(query: str) -> list[dict]:
 
 </details>
 
+## Exam Quiz
+
+Test your understanding with these AI-102 style questions.
+
+**Q1.** You have scanned PDF invoices stored in Azure Blob Storage. You need to extract text from the images within these PDFs during indexing. Which combination of skillset skills should you use?
+
+A) Entity Recognition + Key Phrase Extraction
+B) OCR + Merge
+C) Text Split + Sentiment Analysis
+D) Language Detection + Translation
+
+<details><summary>Answer</summary>
+
+**B) OCR + Merge** — OCR extracts text from images embedded in the PDFs. Merge combines the OCR output with any native text already in the document. This is a classic exam combination for processing scanned documents.
+
+</details>
+
+**Q2.** You need to call a custom machine learning model during the Azure AI Search indexer enrichment pipeline. Which skill type should you use?
+
+A) `#Microsoft.Skills.Text.EntityRecognitionSkill`
+B) `#Microsoft.Skills.Custom.WebApiSkill`
+C) `#Microsoft.Skills.Text.KeyPhraseExtractionSkill`
+D) `#Microsoft.Skills.Vision.OcrSkill`
+
+<details><summary>Answer</summary>
+
+**B) `#Microsoft.Skills.Custom.WebApiSkill`** — The WebApiSkill calls an external HTTP endpoint (typically an Azure Function) with the document data. Your custom ML model runs behind that endpoint. All the other options are built-in cognitive skills.
+
+</details>
+
+**Q3.** A search query uses `"machine learning"~5` with `query_type="full"`. What does this query do?
+
+A) Searches for documents containing exactly "machine learning"
+B) Searches for "machine" and "learning" within 5 words of each other
+C) Searches for fuzzy matches of "machine learning" with edit distance 5
+D) Boosts "machine learning" results by a factor of 5
+
+<details><summary>Answer</summary>
+
+**B) Searches for "machine" and "learning" within 5 words of each other** — This is proximity search in full Lucene query syntax. The `~5` after a quoted phrase means the words must appear within 5 positions of each other. Fuzzy search uses `~` on a single term (e.g., `machin~1`). Boosting uses `^` (e.g., `azure^4`).
+
+</details>
+
+**Q4.** You want to display category counts alongside search results (e.g., "Tutorial: 15, Reference: 8"). Which Azure AI Search feature should you use?
+
+A) Scoring profiles
+B) Facets
+C) Filters
+D) Highlighters
+
+<details><summary>Answer</summary>
+
+**B) Facets** — Faceted navigation returns aggregated counts for field values. The field must be marked as `facetable`. Scoring profiles change ranking order. Filters remove documents from results. Highlighters show matching text snippets.
+
+</details>
+
+**Q5.** You need to export entities extracted during AI enrichment to Power BI for analysis. What should you configure?
+
+A) Output field mappings to the search index
+B) A knowledge store with table projections
+C) A custom WebApiSkill
+D) A semantic configuration
+
+<details><summary>Answer</summary>
+
+**B) A knowledge store with table projections** — Knowledge store table projections write structured data to Azure Table Storage, which Power BI can connect to directly. Output field mappings send data to the search index (not to Power BI). The knowledge store is specifically designed for downstream analytics.
+
+</details>
+
 ## Next Lab
 
 Continue to **[Lab 04: Vision Lab](04-vision.md)** to implement computer vision with Azure AI Vision — image analysis, object detection, and OCR. Lab 04 is independent of Labs 01-03, so you can start it at any time.
