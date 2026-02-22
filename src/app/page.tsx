@@ -132,22 +132,27 @@ export default function DashboardPage() {
             const pct = getDomainProgress(d.number)
             const clr = domainColors[d.number] || domainColors[1]
             return (
-              <div key={d.number} className="glass flex flex-col gap-4 rounded-2xl border border-border bg-card p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className={cn("flex size-7 items-center justify-center rounded-lg text-xs font-black", clr.num)}>
-                        {d.number}
-                      </span>
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{d.weight}</span>
-                    </div>
-                    <span className="text-[13px] font-semibold text-foreground leading-tight">{d.name}</span>
+              <div key={d.number} className="glass flex flex-col gap-5 rounded-2xl border border-border bg-card p-6">
+                {/* Top row: domain number + weight */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <span className={cn("flex size-8 items-center justify-center rounded-lg text-sm font-black", clr.num)}>
+                      {d.number}
+                    </span>
+                    <span className="rounded-md bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      {d.weight}
+                    </span>
                   </div>
-                  <span className={cn("text-3xl font-black font-mono tabular-nums", clr.text)}>
-                    {pct}<span className="text-lg text-muted-foreground">%</span>
+                  <span className={cn("text-3xl font-black font-mono tabular-nums leading-none", clr.text)}>
+                    {pct}<span className="text-base text-muted-foreground">%</span>
                   </span>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+
+                {/* Domain name */}
+                <p className="text-sm font-semibold text-foreground leading-snug">{d.name}</p>
+
+                {/* Progress bar */}
+                <div className="h-2.5 w-full overflow-hidden rounded-full bg-secondary">
                   <div
                     className={cn("h-full rounded-full", clr.bar)}
                     style={{ width: `${Math.max(pct, 3)}%`, transition: "width 0.7s ease-out" }}
