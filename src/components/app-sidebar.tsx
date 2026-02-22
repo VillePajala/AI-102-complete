@@ -8,6 +8,8 @@ import {
   Sun,
   Moon,
   GraduationCap,
+  Menu,
+  X,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { labModules, studyPages } from "@/lib/modules"
@@ -15,11 +17,98 @@ import { Button } from "@/components/ui/button"
 import { useTheme } from "@/components/theme-provider"
 import { useSidebar } from "@/components/sidebar-context"
 
+/* Desktop sidebar: collapsible icon rail */
 export function AppSidebar() {
   const pathname = usePathname()
   const { theme, toggleTheme } = useTheme()
-  const { collapsed, setCollapsed } = useSidebar()
+  const { collapsed, setCollapsed, isMobile, mobileOpen, setMobileOpen } =
+    useSidebar()
 
+  /* ---- Mobile overlay sidebar ---- */
+  if (isMobile) {
+    return (
+      <>
+        {/* Hamburger trigger - fixed top-left */}
+        <div className="fixed left-3 top-3 z-50">
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={() => setMobileOpen(true)}
+            aria-label="Open menu"
+            className="text-muted-foreground"
+          >
+            <Menu className="size-5" />
+          </Button>
+        </div>
+
+        {/* Backdrop + drawer */}
+        {mobileOpen && (
+          <div className="fixed inset-0 z-50 flex">
+            {/* Scrim */}
+            <div
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={() => setMobileOpen(false)}
+              aria-hidden
+            />
+
+            {/* Drawer panel */}
+            <aside className="relative flex h-full w-64 flex-col border-r border-border bg-sidebar text-sidebar-foreground shadow-lg animate-in slide-in-from-left duration-200">
+              {/* Close button */}
+              <div className="flex h-14 items-center justify-between border-b border-border px-3">
+                <Link
+                  href="/"
+                  className="flex items-center gap-2 overflow-hidden"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <GraduationCap className="size-5 shrink-0 text-primary" />
+                  <span className="truncate font-semibold text-sm">
+                    AI-102 Command Center
+                  </span>
+                </Link>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  onClick={() => setMobileOpen(false)}
+                  aria-label="Close menu"
+                  className="text-muted-foreground"
+                >
+                  <X className="size-4" />
+                </Button>
+              </div>
+
+              {/* Nav content */}
+              <MobileSidebarContent
+                pathname={pathname}
+                onNavigate={() => setMobileOpen(false)}
+              />
+
+              {/* Theme toggle */}
+              <div className="border-t border-border p-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleTheme}
+                  className="w-full text-muted-foreground"
+                  aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+                >
+                  {theme === "dark" ? (
+                    <Sun className="size-4" />
+                  ) : (
+                    <Moon className="size-4" />
+                  )}
+                  <span className="ml-2 text-xs">
+                    {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                  </span>
+                </Button>
+              </div>
+            </aside>
+          </div>
+        )}
+      </>
+    )
+  }
+
+  /* ---- Desktop sidebar ---- */
   return (
     <aside
       className={cn(
@@ -138,5 +227,83 @@ export function AppSidebar() {
         </Button>
       </div>
     </aside>
+  )
+}
+
+/* Shared navigation links used in the mobile drawer */
+function MobileSidebarContent({
+  pathname,
+  onNavigate,
+}: {
+  pathname: string
+  onNavigate: () => void
+}) {
+  return (
+    <div className="flex-1 overflow-y-auto py-2">
+      <div className="px-3 py-1.5">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Lab Modules
+        </span>
+      </div>
+      <nav className="flex flex-col gap-0.5 px-2" role="navigation" aria-label="Lab modules">
+        {labModules.map((mod) => {
+          const isActive = pathname === mod.href
+          const Icon = mod.icon
+          return (
+            <Link
+              key={mod.id}
+              href={mod.href}
+              onClick={onNavigate}
+              className={cn(
+                "group flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors",
+                isActive
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+              )}
+            >
+              <Icon className={cn("size-4 shrink-0", isActive ? "text-primary" : mod.color)} />
+              <div className="flex flex-1 items-center justify-between overflow-hidden">
+                <span className="truncate">{mod.name}</span>
+                <span className="ml-1 text-[10px] text-muted-foreground tabular-nums">
+                  {mod.weight}
+                </span>
+              </div>
+            </Link>
+          )
+        })}
+      </nav>
+
+      <div className="mx-3 my-2">
+        <div className="h-px bg-border" />
+      </div>
+
+      <div className="px-3 py-1.5">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Study
+        </span>
+      </div>
+      <nav className="flex flex-col gap-0.5 px-2" role="navigation" aria-label="Study pages">
+        {studyPages.map((page) => {
+          const isActive = pathname === page.href
+          const Icon = page.icon
+          return (
+            <Link
+              key={page.id}
+              href={page.href}
+              onClick={onNavigate}
+              className={cn(
+                "group flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors",
+                isActive
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+              )}
+            >
+              <Icon className={cn("size-4 shrink-0", isActive && "text-primary")} />
+              <span className="truncate">{page.name}</span>
+            </Link>
+          )
+        })}
+      </nav>
+    </div>
   )
 }
