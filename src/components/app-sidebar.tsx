@@ -133,7 +133,7 @@ function Logo() {
   return (
     <div className="relative flex size-7 items-center justify-center rounded-lg border border-primary/25 bg-primary/10">
       <GraduationCap className="size-3.5 text-primary" />
-      <div className="absolute inset-0 rounded-lg bg-primary/15 blur-sm" />
+      <div className="absolute inset-0 rounded-lg bg-primary/10 blur-sm" />
     </div>
   )
 }
