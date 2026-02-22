@@ -209,7 +209,7 @@ export default function SearchPage() {
                   }`}
                 >
                   <span className="text-xs font-medium">{skill.name}</span>
-                  <span className="text-[10px] text-muted-foreground">{skill.description}</span>
+                  <span className="text-[11px] text-muted-foreground">{skill.description}</span>
                 </button>
               ))}
             </div>
@@ -268,7 +268,7 @@ export default function SearchPage() {
                           </div>
                         )}
                       </div>
-                      <Badge variant="outline" className="font-mono text-[10px] shrink-0">
+                      <Badge variant="outline" className="font-mono text-[11px] shrink-0">
                         {result.score.toFixed(3)}
                       </Badge>
                     </div>
@@ -300,7 +300,7 @@ export default function SearchPage() {
               </div>
               <div className="mt-4 flex flex-wrap gap-1.5">
                 {["Invoice", "Receipt", "ID Document", "Business Card", "W-2", "Custom"].map((model) => (
-                  <Badge key={model} variant="secondary" className="text-[10px] cursor-pointer hover:bg-accent">
+                  <Badge key={model} variant="secondary" className="text-[11px] cursor-pointer hover:bg-accent">
                     {model}
                   </Badge>
                 ))}

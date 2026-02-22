@@ -1,19 +1,29 @@
+import logging
+
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Literal
 
 from app.services import openai_service, search_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/generative", tags=["generative"])
 
 
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant", "system"]
+    content: str = Field(..., min_length=1, max_length=50000)
+
+
 class ChatRequest(BaseModel):
-    messages: list[dict]
+    messages: list[ChatMessage]
     model: str | None = None
-    temperature: float = 0.7
-    top_p: float = 1.0
-    max_tokens: int = 800
-    frequency_penalty: float = 0.0
-    presence_penalty: float = 0.0
+    temperature: float = Field(0.7, ge=0, le=2)
+    top_p: float = Field(1.0, ge=0, le=1)
+    max_tokens: int = Field(800, ge=1, le=128000)
+    frequency_penalty: float = Field(0.0, ge=-2, le=2)
+    presence_penalty: float = Field(0.0, ge=-2, le=2)
     use_rag: bool = False
 
 
@@ -23,7 +33,7 @@ class ChatResponse(BaseModel):
 
 
 class ImageRequest(BaseModel):
-    prompt: str
+    prompt: str = Field(..., min_length=1, max_length=4000)
 
 
 class ImageResponse(BaseModel):
@@ -36,11 +46,10 @@ async def chat(req: ChatRequest):
         sources = None
 
         if req.use_rag:
-            # Get the last user message for RAG search
             last_user_msg = ""
             for msg in reversed(req.messages):
-                if msg.get("role") == "user":
-                    last_user_msg = msg.get("content", "")
+                if msg.role == "user":
+                    last_user_msg = msg.content
                     break
 
             if last_user_msg:
@@ -55,21 +64,22 @@ async def chat(req: ChatRequest):
 
                     if context_parts:
                         context = "\n\n".join(context_parts)
-                        system_msg = {
-                            "role": "system",
-                            "content": (
+                        system_msg = ChatMessage(
+                            role="system",
+                            content=(
                                 "Answer the user's question using the following context from their documents. "
                                 "If the context doesn't contain relevant information, say so.\n\n"
                                 f"Context:\n{context}"
                             ),
-                        }
+                        )
                         req.messages = [system_msg, *req.messages]
                 except Exception:
-                    # If search fails, proceed without RAG
+                    logger.warning("RAG search failed, proceeding without context", exc_info=True)
                     sources = None
 
+        messages_dicts = [{"role": m.role, "content": m.content} for m in req.messages]
         message = openai_service.chat_completion(
-            messages=req.messages,
+            messages=messages_dicts,
             model=req.model,
             temperature=req.temperature,
             top_p=req.top_p,
@@ -81,6 +91,7 @@ async def chat(req: ChatRequest):
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
+        logger.error("Chat endpoint error", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -92,4 +103,5 @@ async def generate_image(req: ImageRequest):
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
+        logger.error("Image generation error", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

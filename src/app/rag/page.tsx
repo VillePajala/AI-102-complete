@@ -189,7 +189,13 @@ export default function RagPage() {
                 onClick={() => fileInputRef.current?.click()}
                 role="button"
                 tabIndex={0}
-                onKeyDown={(e) => e.key === "Enter" && fileInputRef.current?.click()}
+                aria-label="Upload documents"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault()
+                    fileInputRef.current?.click()
+                  }
+                }}
               >
                 <Upload className="size-8 text-muted-foreground" />
                 <p className="text-sm text-foreground font-medium">Upload Documents</p>
@@ -276,7 +282,7 @@ export default function RagPage() {
                     {msg.sources && msg.sources.length > 0 && (
                       <div className="mt-1 flex flex-wrap gap-1">
                         {msg.sources.map((s, j) => (
-                          <Badge key={j} variant="secondary" className="text-[10px]">
+                          <Badge key={j} variant="secondary" className="text-[11px]">
                             {s}
                           </Badge>
                         ))}
@@ -343,7 +349,7 @@ export default function RagPage() {
                           Source: {result.source}
                         </p>
                       </div>
-                      <Badge variant="outline" className="font-mono text-[10px] shrink-0">
+                      <Badge variant="outline" className="font-mono text-[11px] shrink-0">
                         {(result.score * 100).toFixed(1)}%
                       </Badge>
                     </div>

@@ -225,7 +225,7 @@ export default function ResponsibleAiPage() {
                         <span className="text-sm text-foreground">{cat.name}</span>
                         <Badge
                           variant={cat.severity > 3 ? "destructive" : "secondary"}
-                          className="text-[10px]"
+                          className="text-[11px]"
                         >
                           {cat.label}
                         </Badge>
@@ -237,7 +237,7 @@ export default function ResponsibleAiPage() {
                             style={{ width: `${(cat.severity / 7) * 100}%` }}
                           />
                         </div>
-                        <span className="text-[10px] font-mono text-muted-foreground w-4">
+                        <span className="text-[11px] font-mono text-muted-foreground w-4">
                           {cat.severity}
                         </span>
                       </div>
@@ -367,7 +367,7 @@ export default function ResponsibleAiPage() {
                 >
                   <List className="size-3.5 shrink-0 text-muted-foreground" />
                   <span className="flex-1 truncate">{list.name}</span>
-                  <Badge variant="secondary" className="text-[10px]">{list.terms.length}</Badge>
+                  <Badge variant="secondary" className="text-[11px]">{list.terms.length}</Badge>
                   <Button
                     variant="ghost"
                     size="icon-xs"

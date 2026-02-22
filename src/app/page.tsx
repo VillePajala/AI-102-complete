@@ -61,7 +61,7 @@ export default function DashboardPage() {
               ].map(s => (
                 <div key={s.label} className="glass flex flex-col items-center rounded-lg border border-border bg-card px-4 py-2.5">
                   <span className="text-xl font-bold tabular-nums text-foreground">{s.value}</span>
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{s.label}</span>
+                  <span className="text-[11px] uppercase tracking-wider text-muted-foreground">{s.label}</span>
                 </div>
               ))}
             </div>
@@ -100,7 +100,7 @@ export default function DashboardPage() {
       <section className="glass rounded-2xl border border-border bg-card p-6">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-foreground">Domain Coverage</h2>
-          <span className="text-[10px] font-mono text-muted-foreground/50">{examDomains.length} domains</span>
+          <span className="text-[11px] font-mono text-muted-foreground/50">{examDomains.length} domains</span>
         </div>
 
         <div className="flex flex-col gap-3.5">
@@ -127,7 +127,7 @@ export default function DashboardPage() {
       <section className="flex flex-col gap-5">
         <div className="flex items-baseline justify-between">
           <h2 className="text-sm font-semibold text-foreground">Lab Modules</h2>
-          <span className="text-[10px] font-mono text-muted-foreground/50">{labModules.length} modules</span>
+          <span className="text-[11px] font-mono text-muted-foreground/50">{labModules.length} modules</span>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -158,7 +158,7 @@ export default function DashboardPage() {
 
                     {/* Footer */}
                     <div className="mt-auto flex items-center justify-between pt-3 border-t border-border/40">
-                      <span className="text-[10px] font-medium text-muted-foreground/70">D{mod.domainNumber} &middot; {mod.weight}</span>
+                      <span className="text-[11px] font-medium text-muted-foreground/70">D{mod.domainNumber} &middot; {mod.weight}</span>
                       <ChevronRight className="size-3.5 text-muted-foreground/30 transition-all duration-200 group-hover:text-primary group-hover:translate-x-0.5" />
                     </div>
                   </div>

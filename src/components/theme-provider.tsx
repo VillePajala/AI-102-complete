@@ -25,11 +25,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("ai102-theme", theme)
   }, [theme, mounted])
 
-  // Apply dark class on first render to avoid flash
-  useEffect(() => {
-    document.documentElement.classList.add("dark")
-  }, [])
-
   const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"))
 
   return (

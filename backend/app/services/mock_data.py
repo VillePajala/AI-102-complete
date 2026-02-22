@@ -146,3 +146,33 @@ def mock_safety_analyze_text() -> dict:
 
 def mock_check_prompt() -> dict:
     return {"flagged": False}
+
+
+def mock_analyze_document(model_id: str = "prebuilt-invoice") -> dict:
+    return {
+        "model_id": model_id,
+        "pages": [{"page_number": 1, "width": 8.5, "height": 11, "unit": "inch"}],
+        "tables": [
+            {
+                "row_count": 3,
+                "column_count": 3,
+                "cells": [
+                    {"row": 0, "column": 0, "content": "Item"},
+                    {"row": 0, "column": 1, "content": "Quantity"},
+                    {"row": 0, "column": 2, "content": "Price"},
+                    {"row": 1, "column": 0, "content": "Widget A"},
+                    {"row": 1, "column": 1, "content": "10"},
+                    {"row": 1, "column": 2, "content": "$50.00"},
+                    {"row": 2, "column": 0, "content": "Widget B"},
+                    {"row": 2, "column": 1, "content": "5"},
+                    {"row": 2, "column": 2, "content": "$75.00"},
+                ],
+            }
+        ],
+        "fields": {
+            "VendorName": {"value": "Contoso Ltd.", "confidence": 0.95},
+            "InvoiceDate": {"value": "2024-01-15", "confidence": 0.92},
+            "InvoiceTotal": {"value": "$875.00", "confidence": 0.98},
+            "CustomerName": {"value": "Northwind Traders", "confidence": 0.90},
+        },
+    }

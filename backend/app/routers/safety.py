@@ -1,17 +1,21 @@
+import logging
+
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.services import safety_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/safety", tags=["safety"])
 
 
 class AnalyzeTextRequest(BaseModel):
-    text: str
+    text: str = Field(..., min_length=1, max_length=10000)
 
 
 class CheckPromptRequest(BaseModel):
-    prompt: str
+    prompt: str = Field(..., min_length=1, max_length=10000)
 
 
 @router.post("/analyze-text")
@@ -22,6 +26,7 @@ async def analyze_text(req: AnalyzeTextRequest):
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
+        logger.error("Content safety analysis error", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -33,4 +38,5 @@ async def check_prompt(req: CheckPromptRequest):
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
+        logger.error("Prompt shield error", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

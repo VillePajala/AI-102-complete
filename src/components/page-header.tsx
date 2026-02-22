@@ -15,13 +15,13 @@ export function PageHeader({ title, description, domain, weight }: PageHeaderPro
           {domain && (
             <Badge
               variant="outline"
-              className="border-primary/20 bg-primary/8 text-[10px] font-bold uppercase tracking-wider text-primary"
+              className="border-primary/20 bg-primary/8 text-[11px] font-bold uppercase tracking-wider text-primary"
             >
               {domain}
             </Badge>
           )}
           {weight && (
-            <Badge variant="outline" className="text-[10px] font-mono text-muted-foreground">
+            <Badge variant="outline" className="text-[11px] font-mono text-muted-foreground">
               {weight}
             </Badge>
           )}

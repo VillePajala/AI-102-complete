@@ -59,6 +59,7 @@ export default function VisionPage() {
       if (!ctx) return
       const img = new window.Image()
       img.crossOrigin = "anonymous"
+      img.onerror = () => console.warn("Failed to load image for bounding box overlay")
       img.onload = () => {
         canvas.width = img.width
         canvas.height = img.height
@@ -149,7 +150,13 @@ export default function VisionPage() {
                 onClick={() => fileInputRef.current?.click()}
                 role="button"
                 tabIndex={0}
-                onKeyDown={(e) => e.key === "Enter" && fileInputRef.current?.click()}
+                aria-label="Upload image file"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault()
+                    fileInputRef.current?.click()
+                  }
+                }}
               >
                 <Upload className="size-8 text-muted-foreground" />
                 <p className="text-sm text-foreground font-medium">Upload Image</p>
@@ -238,7 +245,7 @@ export default function VisionPage() {
                     </h3>
                     <div className="flex flex-wrap gap-1">
                       {result.tags.map((tag, i) => (
-                        <Badge key={i} variant="secondary" className="text-[10px]">
+                        <Badge key={i} variant="secondary" className="text-[11px]">
                           {tag}
                         </Badge>
                       ))}
@@ -254,7 +261,7 @@ export default function VisionPage() {
                       {result.objects.map((obj, i) => (
                         <div key={i} className="flex items-center justify-between text-sm">
                           <span className="text-foreground">{obj.name}</span>
-                          <Badge variant="outline" className="font-mono text-[10px]">
+                          <Badge variant="outline" className="font-mono text-[11px]">
                             {(obj.confidence * 100).toFixed(0)}%
                           </Badge>
                         </div>
@@ -294,17 +301,17 @@ export default function VisionPage() {
               <div className="rounded-md border border-dashed border-border p-6 text-center">
                 <Upload className="mx-auto mb-2 size-6 text-muted-foreground" />
                 <p className="text-xs font-medium text-foreground">Upload Training Images</p>
-                <p className="text-[10px] text-muted-foreground">Add labeled images for training</p>
+                <p className="text-[11px] text-muted-foreground">Add labeled images for training</p>
               </div>
               <div className="rounded-md border border-dashed border-border p-6 text-center">
                 <Tag className="mx-auto mb-2 size-6 text-muted-foreground" />
                 <p className="text-xs font-medium text-foreground">Assign Labels</p>
-                <p className="text-[10px] text-muted-foreground">Tag images with classifications</p>
+                <p className="text-[11px] text-muted-foreground">Tag images with classifications</p>
               </div>
               <div className="rounded-md border border-dashed border-border p-6 text-center">
                 <Scan className="mx-auto mb-2 size-6 text-muted-foreground" />
                 <p className="text-xs font-medium text-foreground">Train & Test</p>
-                <p className="text-[10px] text-muted-foreground">Train model and run predictions</p>
+                <p className="text-[11px] text-muted-foreground">Train model and run predictions</p>
               </div>
             </div>
             <p className="mt-4 text-xs text-muted-foreground">

@@ -32,9 +32,9 @@ const cfg: Record<Status, { label: string; dot: string; text: string; bg: string
 export function StatusIndicator({ status }: { status: Status }) {
   const c = cfg[status]
   return (
-    <div className={cn("flex items-center gap-1.5 rounded-full px-2.5 py-1", c.bg)}>
+    <div className={cn("flex items-center gap-1.5 rounded-full px-2.5 py-1", c.bg)} role="status" aria-label={`Status: ${c.label}`}>
       <div className={cn("size-2 rounded-full", c.dot)} />
-      <span className={cn("text-[10px] font-semibold", c.text)}>{c.label}</span>
+      <span className={cn("text-[11px] font-semibold", c.text)}>{c.label}</span>
     </div>
   )
 }

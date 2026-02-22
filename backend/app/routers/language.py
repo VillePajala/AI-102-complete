@@ -1,24 +1,31 @@
+import logging
+
 from fastapi import APIRouter, HTTPException, UploadFile, File
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.services import language_service
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/language", tags=["language"])
+
+MAX_AUDIO_SIZE = 100 * 1024 * 1024  # 100 MB
+ALLOWED_AUDIO_TYPES = {"audio/wav", "audio/mpeg", "audio/mp3", "audio/ogg", "audio/webm", "audio/x-wav"}
 
 
 class AnalyzeRequest(BaseModel):
-    text: str
+    text: str = Field(..., min_length=1, max_length=50000)
     type: str = "all"
 
 
 class TranslateRequest(BaseModel):
-    text: str
+    text: str = Field(..., min_length=1, max_length=50000)
     source: str = "auto"
     target: str = "es"
 
 
 class TTSRequest(BaseModel):
-    text: str
+    text: str = Field(..., min_length=1, max_length=5000)
 
 
 @router.post("/analyze")
@@ -29,6 +36,7 @@ async def analyze_text(req: AnalyzeRequest):
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
+        logger.error("Text analysis error", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -40,6 +48,7 @@ async def translate_text(req: TranslateRequest):
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
+        logger.error("Translation error", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -47,11 +56,21 @@ async def translate_text(req: TranslateRequest):
 async def speech_to_text(file: UploadFile = File(...)):
     try:
         audio_bytes = await file.read()
+        if len(audio_bytes) > MAX_AUDIO_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Audio file too large. Maximum is {MAX_AUDIO_SIZE // (1024*1024)} MB.",
+            )
+        if len(audio_bytes) == 0:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty.")
         text = language_service.speech_to_text(audio_bytes)
         return {"text": text}
+    except HTTPException:
+        raise
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
+        logger.error("Speech-to-text error", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -63,4 +82,5 @@ async def text_to_speech(req: TTSRequest):
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
+        logger.error("Text-to-speech error", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

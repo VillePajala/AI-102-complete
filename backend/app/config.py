@@ -1,9 +1,17 @@
+import logging
+
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
+
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
     # Demo mode — return mock data without calling Azure
     DEMO_MODE: bool = False
+
+    # CORS origins (comma-separated, e.g. "http://localhost:3000,https://myapp.com")
+    CORS_ORIGINS: str = ""
 
     # Azure OpenAI
     AZURE_OPENAI_ENDPOINT: str = ""
@@ -39,6 +47,23 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+
+    @model_validator(mode="after")
+    def _warn_missing_credentials(self) -> "Settings":
+        if self.DEMO_MODE:
+            return self
+        missing = []
+        if not self.AZURE_OPENAI_ENDPOINT or not self.AZURE_OPENAI_KEY:
+            missing.append("AZURE_OPENAI_ENDPOINT/KEY")
+        if not self.AZURE_AI_SERVICES_ENDPOINT or not self.AZURE_AI_SERVICES_KEY:
+            missing.append("AZURE_AI_SERVICES_ENDPOINT/KEY")
+        if missing:
+            logger.warning(
+                "DEMO_MODE is off but credentials missing: %s. "
+                "Set DEMO_MODE=true or provide credentials.",
+                ", ".join(missing),
+            )
+        return self
 
 
 settings = Settings()
