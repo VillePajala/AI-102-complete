@@ -33,7 +33,7 @@ export function AppSidebar() {
             size="icon-xs"
             onClick={() => setMobileOpen(true)}
             aria-label="Open menu"
-            className="text-muted-foreground hover:text-foreground backdrop-blur-sm bg-background/50 border border-border"
+            className="text-muted-foreground hover:text-foreground backdrop-blur-sm bg-card border border-border"
           >
             <Menu className="size-5" />
           </Button>
@@ -42,7 +42,7 @@ export function AppSidebar() {
         {mobileOpen && (
           <div className="fixed inset-0 z-50 flex">
             <div
-              className="absolute inset-0 bg-background/80 backdrop-blur-md"
+              className="absolute inset-0 bg-background/80 backdrop-blur-sm"
               onClick={() => setMobileOpen(false)}
               aria-hidden
             />
