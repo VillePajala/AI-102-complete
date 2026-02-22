@@ -200,7 +200,7 @@ export default function GenerativePage() {
             <Card className="flex flex-1 flex-col">
               <CardContent className="flex flex-1 flex-col gap-4 pt-6">
                 {/* Messages */}
-                <div className="flex flex-1 flex-col gap-3 overflow-y-auto rounded-md border border-border bg-background p-4" style={{ minHeight: 400, maxHeight: "60vh" }}>
+                <div className="flex flex-1 flex-col gap-3 overflow-y-auto rounded-lg border border-border bg-secondary/30 p-4" style={{ minHeight: 400, maxHeight: "60vh" }}>
                   {messages.length === 0 && (
                     <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
                       Start a conversation with the AI model
@@ -245,7 +245,7 @@ export default function GenerativePage() {
                     }}
                     placeholder="Type your message... (Shift+Enter for new line)"
                     rows={2}
-                    className="flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="flex-1 resize-none rounded-lg border border-input bg-secondary/30 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                   <Button onClick={sendMessage} disabled={loading || !input.trim()} size="default">
                     <Send className="size-4" />

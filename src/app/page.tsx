@@ -1,107 +1,173 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowRight } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
+import { ChevronRight } from "lucide-react"
 import { StatusIndicator } from "@/components/status-indicator"
 import { labModules, examDomains } from "@/lib/modules"
 import { useModuleProgress } from "@/hooks/use-progress"
+import { cn } from "@/lib/utils"
+
+/* Accent per module — tonal palette */
+const accent: Record<string, { icon: string; bg: string; strip: string }> = {
+  foundry:          { icon: "text-indigo-500 dark:text-indigo-400",    bg: "bg-indigo-500/8 dark:bg-indigo-400/10",    strip: "bg-indigo-500 dark:bg-indigo-400" },
+  generative:       { icon: "text-sky-500 dark:text-sky-400",          bg: "bg-sky-500/8 dark:bg-sky-400/10",          strip: "bg-sky-500 dark:bg-sky-400" },
+  rag:              { icon: "text-slate-500 dark:text-slate-400",      bg: "bg-slate-500/8 dark:bg-slate-400/10",      strip: "bg-slate-400 dark:bg-slate-500" },
+  agents:           { icon: "text-violet-500 dark:text-violet-400",    bg: "bg-violet-500/8 dark:bg-violet-400/10",    strip: "bg-violet-500 dark:bg-violet-400" },
+  vision:           { icon: "text-blue-500 dark:text-blue-400",        bg: "bg-blue-500/8 dark:bg-blue-400/10",        strip: "bg-blue-500 dark:bg-blue-400" },
+  language:         { icon: "text-zinc-500 dark:text-zinc-400",        bg: "bg-zinc-500/8 dark:bg-zinc-400/10",        strip: "bg-zinc-400 dark:bg-zinc-500" },
+  search:           { icon: "text-indigo-400 dark:text-indigo-300",    bg: "bg-indigo-400/8 dark:bg-indigo-300/10",    strip: "bg-indigo-400 dark:bg-indigo-300" },
+  "responsible-ai": { icon: "text-slate-600 dark:text-slate-300",      bg: "bg-slate-600/8 dark:bg-slate-300/10",      strip: "bg-slate-500 dark:bg-slate-400" },
+}
 
 export default function DashboardPage() {
   const { getModuleStatus, getDomainProgress, overallReadiness } = useModuleProgress()
 
+  const completedCount = labModules.filter(m => getModuleStatus(m.id) === "completed").length
+  const activeCount = labModules.filter(m => getModuleStatus(m.id) === "in-progress").length
+
+  /* SVG gauge math */
+  const r = 54
+  const circ = 2 * Math.PI * r
+
   return (
-    <div className="flex flex-col gap-6">
-      {/* Hero */}
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold text-foreground text-balance">
-          AI-102 Command Center
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Hands-on lab and study tracker for the Microsoft AI-102 AI Engineer Associate exam
-        </p>
-      </div>
+    <div className="flex flex-col gap-10">
 
-      {/* Readiness overview */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardDescription>Overall Readiness</CardDescription>
-            <CardTitle className="text-3xl font-mono">{overallReadiness}%</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Progress value={overallReadiness} className="h-2" />
-          </CardContent>
-        </Card>
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-sm">Domain Coverage</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-2">
-              {examDomains.map((d) => {
-                const progress = getDomainProgress(d.number)
-                return (
-                  <div key={d.number} className="flex items-center gap-3">
-                    <span className="w-5 text-xs text-muted-foreground font-mono">
-                      D{d.number}
-                    </span>
-                    <div className="flex-1">
-                      <Progress value={progress} className="h-1.5" />
-                    </div>
-                    <span className="w-12 text-right text-xs text-muted-foreground font-mono tabular-nums">
-                      {progress}%
-                    </span>
-                    <span className="w-14 text-right text-[10px] text-muted-foreground">
-                      {d.weight}
-                    </span>
-                  </div>
-                )
-              })}
+      {/* ── HERO ── */}
+      <section className="glass relative overflow-hidden rounded-3xl border border-border bg-card">
+        {/* Background glow orbs */}
+        <div className="pointer-events-none absolute -left-32 -top-32 size-96 rounded-full bg-[radial-gradient(circle,oklch(0.55_0.28_275/0.25)_0%,transparent_65%)] dark:bg-[radial-gradient(circle,oklch(0.42_0.25_275/0.40)_0%,transparent_65%)]" />
+        <div className="pointer-events-none absolute -bottom-32 -right-32 size-80 rounded-full bg-[radial-gradient(circle,oklch(0.60_0.20_200/0.18)_0%,transparent_65%)] dark:bg-[radial-gradient(circle,oklch(0.35_0.18_200/0.30)_0%,transparent_65%)]" />
+
+        <div className="relative flex flex-col gap-8 p-8 md:flex-row md:items-center md:justify-between md:p-12">
+          {/* Left: copy */}
+          <div className="flex flex-col gap-3">
+            <span className="inline-flex w-fit rounded-full bg-primary/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.15em] text-primary">
+              AI-102 &middot; Azure AI Engineer
+            </span>
+            <h1 className="text-3xl font-extrabold tracking-tight text-foreground text-balance md:text-4xl leading-[1.1]">
+              Command Center
+            </h1>
+            <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+              Track progress across all lab modules and exam domains.
+            </p>
+
+            {/* Stat strip */}
+            <div className="mt-3 flex items-center gap-5">
+              {[
+                { label: "Labs", value: labModules.length },
+                { label: "Completed", value: completedCount },
+                { label: "Active", value: activeCount },
+                { label: "Domains", value: examDomains.length },
+              ].map(s => (
+                <div key={s.label} className="glass flex flex-col items-center rounded-lg border border-border bg-card px-4 py-2.5">
+                  <span className="text-xl font-bold tabular-nums text-foreground">{s.value}</span>
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{s.label}</span>
+                </div>
+              ))}
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
 
-      {/* Module grid */}
-      <div>
-        <h2 className="mb-3 text-sm font-semibold text-foreground">Lab Modules</h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Right: gauge */}
+          <div className="flex shrink-0 flex-col items-center gap-3">
+            <div className="relative flex size-44 items-center justify-center md:size-48">
+              <svg className="absolute inset-0 size-full -rotate-90" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r={r} fill="none" strokeWidth="6" className="stroke-secondary" />
+                <circle
+                  cx="60" cy="60" r={r} fill="none"
+                  strokeWidth="7" strokeLinecap="round"
+                  className="stroke-primary"
+                  style={{
+                    strokeDasharray: circ,
+                    strokeDashoffset: circ * (1 - overallReadiness / 100),
+                    transition: "stroke-dashoffset 1s ease-out",
+                    filter: "drop-shadow(0 0 6px oklch(0.72 0.22 275 / 0.4))",
+                  }}
+                />
+              </svg>
+              <div className="relative flex flex-col items-center">
+                <span className="text-5xl font-black tabular-nums text-foreground tracking-tighter md:text-6xl">
+                  {overallReadiness}
+                </span>
+                <span className="text-xs font-bold uppercase tracking-widest text-primary -mt-0.5">percent</span>
+              </div>
+            </div>
+            <span className="text-sm font-semibold text-foreground">Exam Readiness</span>
+          </div>
+        </div>
+      </section>
+
+      {/* ── DOMAIN COVERAGE ── */}
+      <section className="glass rounded-2xl border border-border bg-card p-6">
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-foreground">Domain Coverage</h2>
+          <span className="text-[10px] font-mono text-muted-foreground/50">{examDomains.length} domains</span>
+        </div>
+
+        <div className="flex flex-col gap-3.5">
+          {examDomains.map((d) => {
+            const pct = getDomainProgress(d.number)
+            return (
+              <div key={d.number} className="flex items-center gap-3">
+                <span className="w-4 shrink-0 text-[11px] font-bold tabular-nums text-muted-foreground/70">{d.number}</span>
+                <span className="w-44 shrink-0 truncate text-[13px] text-foreground/70 max-sm:w-24">{d.name}</span>
+                <div className="flex-1 h-2 overflow-hidden rounded-full bg-secondary">
+                  <div
+                    className="h-full rounded-full bg-primary/70"
+                    style={{ width: `${Math.max(pct, 2)}%`, transition: "width 0.7s ease-out" }}
+                  />
+                </div>
+                <span className="w-9 shrink-0 text-right text-xs font-semibold font-mono tabular-nums text-foreground/80">{pct}%</span>
+              </div>
+            )
+          })}
+        </div>
+      </section>
+
+      {/* ── LAB MODULES ── */}
+      <section className="flex flex-col gap-5">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-sm font-semibold text-foreground">Lab Modules</h2>
+          <span className="text-[10px] font-mono text-muted-foreground/50">{labModules.length} modules</span>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {labModules.map((mod) => {
             const Icon = mod.icon
             const status = getModuleStatus(mod.id)
+            const a = accent[mod.id] || accent.foundry
             return (
-              <Link key={mod.id} href={mod.href}>
-                <Card className="group h-full transition-colors hover:border-primary/30 hover:bg-accent/50">
-                  <CardHeader>
+              <Link key={mod.id} href={mod.href} className="group">
+                <div className={cn(
+                  "glass relative flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card",
+                  "transition-all duration-200 hover:-translate-y-1 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5",
+                )}>
+                  {/* Colored top strip */}
+                  <div className={cn("h-1 w-full", a.strip)} />
+
+                  <div className="flex flex-1 flex-col gap-4 p-4">
+                    {/* Icon + status row */}
                     <div className="flex items-start justify-between">
-                      <div className="flex size-9 items-center justify-center rounded-md bg-secondary">
-                        <Icon className={`size-4 ${mod.color}`} />
+                      <div className={cn("flex size-10 items-center justify-center rounded-lg", a.bg)}>
+                        <Icon className={cn("size-5", a.icon)} strokeWidth={1.75} />
                       </div>
                       <StatusIndicator status={status} />
                     </div>
-                    <CardTitle className="text-sm">{mod.name}</CardTitle>
-                    <CardDescription className="text-xs leading-relaxed">
-                      {mod.description}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <Badge variant="secondary" className="text-[10px]">
-                        Domain {mod.domainNumber} &middot; {mod.weight}
-                      </Badge>
-                      <ArrowRight className="size-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+
+                    {/* Title */}
+                    <h3 className="text-sm font-semibold text-foreground leading-snug">{mod.name}</h3>
+
+                    {/* Footer */}
+                    <div className="mt-auto flex items-center justify-between pt-3 border-t border-border/40">
+                      <span className="text-[10px] font-medium text-muted-foreground/70">D{mod.domainNumber} &middot; {mod.weight}</span>
+                      <ChevronRight className="size-3.5 text-muted-foreground/30 transition-all duration-200 group-hover:text-primary group-hover:translate-x-0.5" />
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </Link>
             )
           })}
         </div>
-      </div>
+      </section>
     </div>
   )
 }
