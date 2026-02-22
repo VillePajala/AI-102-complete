@@ -28,8 +28,10 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
   return (
     <div ref={callbackRef} className="flex h-screen overflow-hidden bg-background">
       <AppSidebar />
-      <main className="flex-1 overflow-y-auto">
-        <div className={`mx-auto max-w-7xl p-6 ${isMobile ? "pt-14" : ""}`}>
+      <main className="relative flex-1 overflow-y-auto">
+        {/* Subtle radial glow in the background */}
+        <div className="pointer-events-none fixed right-0 top-0 h-[500px] w-[500px] rounded-full bg-primary/[0.03] blur-3xl" />
+        <div className={`relative mx-auto max-w-7xl p-6 ${isMobile ? "pt-14" : ""}`}>
           {children}
         </div>
       </main>
