@@ -37,19 +37,15 @@ export default function DashboardPage() {
 
         <div className="relative flex flex-col gap-8 p-8 md:flex-row md:items-center md:justify-between md:p-10">
           {/* Left: copy */}
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-3">
-              <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.15em] text-primary">
-                AI-102
-              </span>
-              <span className="h-px flex-1 max-w-16 bg-border" />
-              <span className="text-[11px] font-medium text-muted-foreground">Azure AI Engineer</span>
-            </div>
+          <div className="flex flex-col gap-3">
+            <span className="inline-flex w-fit rounded-full bg-primary/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.15em] text-primary">
+              AI-102 &middot; Azure AI Engineer
+            </span>
             <h1 className="text-3xl font-extrabold tracking-tight text-foreground text-balance md:text-4xl leading-[1.1]">
               Command Center
             </h1>
-            <p className="max-w-sm text-[13px] leading-relaxed text-muted-foreground">
-              Your mission control for certification readiness. Track progress across all lab modules and exam domains.
+            <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+              Track progress across all lab modules and exam domains.
             </p>
           </div>
 
@@ -71,9 +67,9 @@ export default function DashboardPage() {
                   }}
                 />
               </svg>
-              <span className="relative text-4xl font-black font-mono tabular-nums text-foreground md:text-5xl">
+              <span className="relative text-5xl font-black tabular-nums text-foreground md:text-6xl tracking-tighter">
                 {overallReadiness}
-                <span className="text-base font-semibold text-muted-foreground">%</span>
+                <span className="text-lg font-semibold text-muted-foreground">%</span>
               </span>
             </div>
           </div>
@@ -82,25 +78,25 @@ export default function DashboardPage() {
 
       {/* ── DOMAINS ── */}
       <section className="glass rounded-2xl border border-border bg-card px-6 py-5">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Domain Coverage</h2>
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-foreground">Domain Coverage</h2>
           <span className="text-[10px] font-mono text-muted-foreground/50">{examDomains.length} domains</span>
         </div>
 
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3.5">
           {examDomains.map((d) => {
             const pct = getDomainProgress(d.number)
             return (
               <div key={d.number} className="flex items-center gap-3">
                 <span className="w-4 shrink-0 text-[11px] font-bold tabular-nums text-muted-foreground/70">{d.number}</span>
-                <span className="w-44 shrink-0 truncate text-[12px] text-foreground/70 max-sm:w-20">{d.name}</span>
-                <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-secondary">
+                <span className="w-44 shrink-0 truncate text-[13px] text-foreground/70 max-sm:w-24">{d.name}</span>
+                <div className="flex-1 h-2 overflow-hidden rounded-full bg-secondary">
                   <div
                     className="h-full rounded-full bg-primary/70"
                     style={{ width: `${Math.max(pct, 2)}%`, transition: "width 0.7s ease-out" }}
                   />
                 </div>
-                <span className="w-9 shrink-0 text-right text-[11px] font-semibold font-mono tabular-nums text-foreground/80">{pct}%</span>
+                <span className="w-9 shrink-0 text-right text-xs font-semibold font-mono tabular-nums text-foreground/80">{pct}%</span>
               </div>
             )
           })}
@@ -110,11 +106,11 @@ export default function DashboardPage() {
       {/* ── MODULES ── */}
       <section className="flex flex-col gap-4">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Lab Modules</h2>
+          <h2 className="text-sm font-semibold text-foreground">Lab Modules</h2>
           <span className="text-[10px] font-mono text-muted-foreground/50">{labModules.length} labs</span>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {labModules.map((mod) => {
             const Icon = mod.icon
             const status = getModuleStatus(mod.id)
@@ -126,22 +122,19 @@ export default function DashboardPage() {
                   "transition-all duration-200 hover:-translate-y-1 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5",
                 )}>
                   {/* Colored top strip */}
-                  <div className={cn("h-[3px] w-full", a.strip)} />
+                  <div className={cn("h-1 w-full", a.strip)} />
 
-                  <div className="flex flex-1 flex-col gap-3 p-4">
+                  <div className="flex flex-1 flex-col gap-4 p-4">
                     {/* Icon + status row */}
                     <div className="flex items-start justify-between">
-                      <div className={cn("flex size-9 items-center justify-center rounded-lg", a.bg)}>
-                        <Icon className={cn("size-[18px]", a.icon)} strokeWidth={1.75} />
+                      <div className={cn("flex size-10 items-center justify-center rounded-lg", a.bg)}>
+                        <Icon className={cn("size-5", a.icon)} strokeWidth={1.75} />
                       </div>
                       <StatusIndicator status={status} />
                     </div>
 
-                    {/* Title + description */}
-                    <div className="flex flex-col gap-1">
-                      <h3 className="text-[13px] font-semibold text-foreground leading-snug">{mod.name}</h3>
-                      <p className="text-[11px] leading-relaxed text-muted-foreground">{mod.description}</p>
-                    </div>
+                    {/* Title */}
+                    <h3 className="text-sm font-semibold text-foreground leading-snug">{mod.name}</h3>
 
                     {/* Footer */}
                     <div className="mt-auto flex items-center justify-between pt-3 border-t border-border/40">
