@@ -166,32 +166,6 @@
   100% { transform: translateX(100%); }
 }
 
-/* Mount entrance animation */
-@keyframes fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
-.animate-fade-up {
-  animation: fade-up 0.5s ease-out both;
-}
-
-/* Stagger children — each child delays a bit more */
-.stagger > :nth-child(1)  { animation-delay: 0ms; }
-.stagger > :nth-child(2)  { animation-delay: 50ms; }
-.stagger > :nth-child(3)  { animation-delay: 100ms; }
-.stagger > :nth-child(4)  { animation-delay: 150ms; }
-.stagger > :nth-child(5)  { animation-delay: 200ms; }
-.stagger > :nth-child(6)  { animation-delay: 250ms; }
-.stagger > :nth-child(7)  { animation-delay: 300ms; }
-.stagger > :nth-child(8)  { animation-delay: 350ms; }
-.stagger > :nth-child(9)  { animation-delay: 400ms; }
-.stagger > :nth-child(10) { animation-delay: 450ms; }
 
 
