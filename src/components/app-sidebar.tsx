@@ -7,7 +7,7 @@ import {
   PanelLeft,
   Sun,
   Moon,
-  GraduationCap,
+  Hexagon,
   Menu,
   X,
 } from "lucide-react"
@@ -47,7 +47,7 @@ export function AppSidebar() {
               <div className="flex h-14 items-center justify-between border-b border-sidebar-border px-4">
                 <Link href="/" className="flex items-center gap-2.5" onClick={() => setMobileOpen(false)}>
                   <div className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                    <GraduationCap className="size-3.5" />
+                    <Hexagon className="size-3.5" />
                   </div>
                   <span className="text-sm font-bold tracking-tight">AI-102</span>
                 </Link>
@@ -82,7 +82,7 @@ export function AppSidebar() {
           <>
             <Link href="/" className="flex items-center gap-2.5">
               <div className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <GraduationCap className="size-3.5" />
+                <Hexagon className="size-3.5" />
               </div>
               <span className="text-sm font-bold tracking-tight">AI-102</span>
             </Link>

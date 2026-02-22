@@ -1,13 +1,13 @@
 import {
-  Server,
-  Sparkles,
-  FileSearch,
-  Bot,
-  Eye,
-  Languages,
-  Search,
-  Shield,
-  BookOpen,
+  Blocks,
+  BrainCircuit,
+  Database,
+  Workflow,
+  ScanEye,
+  MessageSquareText,
+  Layers,
+  ShieldCheck,
+  BookMarked,
   BarChart3,
 } from "lucide-react"
 
@@ -16,7 +16,7 @@ export interface Module {
   name: string
   description: string
   href: string
-  icon: typeof Server
+  icon: typeof Blocks
   domain: string
   domainNumber: number
   weight: string
@@ -29,7 +29,7 @@ export const labModules: Module[] = [
     name: "Foundry Hub",
     description: "Azure resource management and planning",
     href: "/foundry",
-    icon: Server,
+    icon: Blocks,
     domain: "Plan & Manage",
     domainNumber: 1,
     weight: "20-25%",
@@ -40,7 +40,7 @@ export const labModules: Module[] = [
     name: "GenAI Lab",
     description: "Chat with AI models, prompt engineering, image generation",
     href: "/generative",
-    icon: Sparkles,
+    icon: BrainCircuit,
     domain: "Generative AI",
     domainNumber: 2,
     weight: "15-20%",
@@ -51,7 +51,7 @@ export const labModules: Module[] = [
     name: "RAG Engine",
     description: "Upload documents, search, ask questions grounded in data",
     href: "/rag",
-    icon: FileSearch,
+    icon: Database,
     domain: "GenAI + Knowledge",
     domainNumber: 2,
     weight: "15-20%",
@@ -62,7 +62,7 @@ export const labModules: Module[] = [
     name: "Agent Workshop",
     description: "Build and test AI agents",
     href: "/agents",
-    icon: Bot,
+    icon: Workflow,
     domain: "Agentic Solutions",
     domainNumber: 3,
     weight: "5-10%",
@@ -73,7 +73,7 @@ export const labModules: Module[] = [
     name: "Vision Lab",
     description: "Analyze images, OCR, object detection, custom classifiers",
     href: "/vision",
-    icon: Eye,
+    icon: ScanEye,
     domain: "Computer Vision",
     domainNumber: 4,
     weight: "10-15%",
@@ -84,7 +84,7 @@ export const labModules: Module[] = [
     name: "Language & Speech",
     description: "Text analysis, translation, speech-to-text, text-to-speech",
     href: "/language",
-    icon: Languages,
+    icon: MessageSquareText,
     domain: "NLP Solutions",
     domainNumber: 5,
     weight: "15-20%",
@@ -95,7 +95,7 @@ export const labModules: Module[] = [
     name: "Knowledge Mining",
     description: "Search indexes, document extraction, skillsets",
     href: "/search",
-    icon: Search,
+    icon: Layers,
     domain: "Knowledge Mining",
     domainNumber: 6,
     weight: "15-20%",
@@ -106,7 +106,7 @@ export const labModules: Module[] = [
     name: "Responsible AI",
     description: "Content moderation, safety filters, prompt shields",
     href: "/responsible-ai",
-    icon: Shield,
+    icon: ShieldCheck,
     domain: "Cross-cutting",
     domainNumber: 1,
     weight: "cross-cutting",
@@ -120,7 +120,7 @@ export const studyPages = [
     name: "Resources",
     description: "Curated study links and personal notes",
     href: "/resources",
-    icon: BookOpen,
+    icon: BookMarked,
   },
   {
     id: "progress",
