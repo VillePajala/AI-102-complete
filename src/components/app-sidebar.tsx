@@ -191,13 +191,16 @@ function ThemeFooter({
       <button
         onClick={toggleTheme}
         className={cn(
-          "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+          "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition-colors",
+          "bg-accent/50 text-foreground hover:bg-accent",
           collapsed && "justify-center"
         )}
         aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
       >
-        {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-        {!collapsed && <span>{theme === "dark" ? "Light" : "Dark"}</span>}
+        <div className="relative flex size-5 items-center justify-center">
+          {theme === "dark" ? <Sun className="size-3.5 text-amber-400" /> : <Moon className="size-3.5 text-indigo-500" />}
+        </div>
+        {!collapsed && <span className="text-[12px] font-medium">{theme === "dark" ? "Light mode" : "Dark mode"}</span>}
       </button>
     </div>
   )

@@ -158,3 +158,13 @@
     radial-gradient(ellipse 50% 40% at 25% 60%, oklch(0.30 0.15 150 / 22%) 0%, transparent 45%),
     var(--background);
 }
+
+/* Shimmer animation for progress bars */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@theme inline {
+  --animate-shimmer: shimmer 2s infinite;
+}
