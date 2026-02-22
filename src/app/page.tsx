@@ -7,19 +7,21 @@ import { labModules, examDomains } from "@/lib/modules"
 import { useModuleProgress } from "@/hooks/use-progress"
 import { cn } from "@/lib/utils"
 
-/* Simple color map per module -- just an accent color for the icon + left strip */
+/*
+ * Tonal palette — all modules use shades from the same slate-indigo family
+ * so the grid looks cohesive and professional, not like a rainbow.
+ * Differentiation comes from lightness/warmth shifts, not different hues.
+ */
 const accent: Record<string, { icon: string; bg: string; strip: string }> = {
-  foundry:          { icon: "text-violet-500 dark:text-violet-400",  bg: "bg-violet-500/10",  strip: "bg-violet-500" },
-  generative:       { icon: "text-emerald-500 dark:text-emerald-400", bg: "bg-emerald-500/10", strip: "bg-emerald-500" },
-  rag:              { icon: "text-amber-500 dark:text-amber-400",    bg: "bg-amber-500/10",   strip: "bg-amber-500" },
-  agents:           { icon: "text-cyan-500 dark:text-cyan-400",      bg: "bg-cyan-500/10",    strip: "bg-cyan-500" },
-  vision:           { icon: "text-rose-500 dark:text-rose-400",      bg: "bg-rose-500/10",    strip: "bg-rose-500" },
-  language:         { icon: "text-blue-500 dark:text-blue-400",      bg: "bg-blue-500/10",    strip: "bg-blue-500" },
-  search:           { icon: "text-teal-500 dark:text-teal-400",      bg: "bg-teal-500/10",    strip: "bg-teal-500" },
-  "responsible-ai": { icon: "text-orange-500 dark:text-orange-400",  bg: "bg-orange-500/10",  strip: "bg-orange-500" },
+  foundry:          { icon: "text-indigo-500 dark:text-indigo-400",    bg: "bg-indigo-500/8 dark:bg-indigo-400/10",    strip: "bg-indigo-500 dark:bg-indigo-400" },
+  generative:       { icon: "text-sky-500 dark:text-sky-400",          bg: "bg-sky-500/8 dark:bg-sky-400/10",          strip: "bg-sky-500 dark:bg-sky-400" },
+  rag:              { icon: "text-slate-500 dark:text-slate-400",      bg: "bg-slate-500/8 dark:bg-slate-400/10",      strip: "bg-slate-400 dark:bg-slate-500" },
+  agents:           { icon: "text-violet-500 dark:text-violet-400",    bg: "bg-violet-500/8 dark:bg-violet-400/10",    strip: "bg-violet-500 dark:bg-violet-400" },
+  vision:           { icon: "text-blue-500 dark:text-blue-400",        bg: "bg-blue-500/8 dark:bg-blue-400/10",        strip: "bg-blue-500 dark:bg-blue-400" },
+  language:         { icon: "text-zinc-500 dark:text-zinc-400",        bg: "bg-zinc-500/8 dark:bg-zinc-400/10",        strip: "bg-zinc-400 dark:bg-zinc-500" },
+  search:           { icon: "text-indigo-400 dark:text-indigo-300",    bg: "bg-indigo-400/8 dark:bg-indigo-300/10",    strip: "bg-indigo-400 dark:bg-indigo-300" },
+  "responsible-ai": { icon: "text-slate-600 dark:text-slate-300",      bg: "bg-slate-600/8 dark:bg-slate-300/10",      strip: "bg-slate-500 dark:bg-slate-400" },
 }
-
-/* All domain bars use a single unified accent — primary color with opacity steps */
 
 export default function DashboardPage() {
   const { getModuleStatus, getDomainProgress, overallReadiness } = useModuleProgress()

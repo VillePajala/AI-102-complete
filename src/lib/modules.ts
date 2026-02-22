@@ -33,7 +33,7 @@ export const labModules: Module[] = [
     domain: "Plan & Manage",
     domainNumber: 1,
     weight: "20-25%",
-    color: "text-chart-1",
+    color: "text-indigo-500 dark:text-indigo-400",
   },
   {
     id: "generative",
@@ -44,7 +44,7 @@ export const labModules: Module[] = [
     domain: "Generative AI",
     domainNumber: 2,
     weight: "15-20%",
-    color: "text-chart-2",
+    color: "text-sky-500 dark:text-sky-400",
   },
   {
     id: "rag",
@@ -55,7 +55,7 @@ export const labModules: Module[] = [
     domain: "GenAI + Knowledge",
     domainNumber: 2,
     weight: "15-20%",
-    color: "text-chart-3",
+    color: "text-slate-500 dark:text-slate-400",
   },
   {
     id: "agents",
@@ -66,7 +66,7 @@ export const labModules: Module[] = [
     domain: "Agentic Solutions",
     domainNumber: 3,
     weight: "5-10%",
-    color: "text-chart-4",
+    color: "text-violet-500 dark:text-violet-400",
   },
   {
     id: "vision",
@@ -77,7 +77,7 @@ export const labModules: Module[] = [
     domain: "Computer Vision",
     domainNumber: 4,
     weight: "10-15%",
-    color: "text-chart-5",
+    color: "text-blue-500 dark:text-blue-400",
   },
   {
     id: "language",
@@ -88,7 +88,7 @@ export const labModules: Module[] = [
     domain: "NLP Solutions",
     domainNumber: 5,
     weight: "15-20%",
-    color: "text-chart-1",
+    color: "text-zinc-500 dark:text-zinc-400",
   },
   {
     id: "search",
@@ -99,7 +99,7 @@ export const labModules: Module[] = [
     domain: "Knowledge Mining",
     domainNumber: 6,
     weight: "15-20%",
-    color: "text-chart-2",
+    color: "text-indigo-400 dark:text-indigo-300",
   },
   {
     id: "responsible-ai",
@@ -110,7 +110,7 @@ export const labModules: Module[] = [
     domain: "Cross-cutting",
     domainNumber: 1,
     weight: "cross-cutting",
-    color: "text-chart-3",
+    color: "text-slate-600 dark:text-slate-300",
   },
 ]
 
