@@ -29,9 +29,14 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
     <div ref={callbackRef} className="flex h-screen overflow-hidden bg-background">
       <AppSidebar />
       <main className="relative flex-1 overflow-y-auto">
-        {/* Subtle radial glow in the background */}
-        <div className="pointer-events-none fixed right-0 top-0 h-[500px] w-[500px] rounded-full bg-primary/[0.03] blur-3xl" />
-        <div className={`relative mx-auto max-w-7xl p-6 ${isMobile ? "pt-14" : ""}`}>
+        {/* Ambient glows */}
+        <div className="pointer-events-none fixed right-0 top-0 h-[600px] w-[600px] rounded-full bg-primary/[0.02] blur-[120px]" />
+        <div className="pointer-events-none fixed bottom-0 left-1/3 h-[400px] w-[400px] rounded-full bg-chart-5/[0.015] blur-[100px]" />
+
+        {/* Dot grid */}
+        <div className="pointer-events-none fixed inset-0 bg-dot-pattern opacity-30" />
+
+        <div className={`relative mx-auto max-w-7xl px-6 py-8 ${isMobile ? "pt-14" : ""}`}>
           {children}
         </div>
       </main>
