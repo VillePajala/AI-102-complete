@@ -179,29 +179,30 @@ export default function DashboardPage() {
                 <div className={cn(
                   "glass relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all duration-200",
                   "hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1",
-                  /* The before pseudo-element is the per-card radial glow */
-                  "before:pointer-events-none before:absolute before:inset-0 before:rounded-2xl before:transition-opacity before:duration-300",
+                  /* The before pseudo-element is the per-card radial glow -- sits behind content via z-0 */
+                  "before:pointer-events-none before:absolute before:inset-0 before:z-0 before:rounded-2xl before:transition-opacity before:duration-300",
                   glow,
                 )}>
-                  <div className="relative flex flex-1 flex-col gap-5 p-5">
+                  {/* z-10 ensures all text content renders above the glow layer */}
+                  <div className="relative z-10 flex flex-1 flex-col gap-4 p-5">
                     <div className="flex items-start justify-between">
-                      <div className={cn("flex size-12 items-center justify-center rounded-xl", iconBg)}>
-                        <Icon className={cn("size-6", iconClr)} />
+                      <div className={cn("flex size-11 items-center justify-center rounded-xl", iconBg)}>
+                        <Icon className={cn("size-5", iconClr)} />
                       </div>
                       <StatusIndicator status={status} />
                     </div>
 
-                    <div className="flex flex-col gap-1.5">
-                      <h3 className="text-[15px] font-bold text-foreground tracking-tight">{mod.name}</h3>
-                      <p className="text-[12px] leading-relaxed text-muted-foreground line-clamp-2">{mod.description}</p>
+                    <div className="flex flex-col gap-2">
+                      <h3 className="text-sm font-bold text-foreground leading-snug">{mod.name}</h3>
+                      <p className="text-[13px] leading-relaxed text-foreground/60">{mod.description}</p>
                     </div>
 
-                    <div className="mt-auto flex items-center justify-between pt-4 border-t border-border">
+                    <div className="mt-auto flex items-center justify-between pt-3 border-t border-border/50">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">D{mod.domainNumber}</span>
-                        <span className="text-[10px] text-muted-foreground/60 font-mono">{mod.weight}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-foreground/50">D{mod.domainNumber}</span>
+                        <span className="text-[10px] text-foreground/35 font-mono">{mod.weight}</span>
                       </div>
-                      <ArrowUpRight className="size-4 text-muted-foreground/40 transition-all duration-200 group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                      <ArrowUpRight className="size-4 text-foreground/30 transition-all duration-200 group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                     </div>
                   </div>
                 </div>
