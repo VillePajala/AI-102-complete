@@ -19,14 +19,7 @@ const accent: Record<string, { icon: string; bg: string; strip: string }> = {
   "responsible-ai": { icon: "text-orange-500 dark:text-orange-400",  bg: "bg-orange-500/10",  strip: "bg-orange-500" },
 }
 
-const domainAccent: Record<number, { bar: string; text: string; badge: string }> = {
-  1: { bar: "bg-violet-500",  text: "text-violet-500 dark:text-violet-400",  badge: "bg-violet-500/12 text-violet-600 dark:text-violet-300" },
-  2: { bar: "bg-emerald-500", text: "text-emerald-500 dark:text-emerald-400", badge: "bg-emerald-500/12 text-emerald-600 dark:text-emerald-300" },
-  3: { bar: "bg-cyan-500",    text: "text-cyan-500 dark:text-cyan-400",       badge: "bg-cyan-500/12 text-cyan-600 dark:text-cyan-300" },
-  4: { bar: "bg-rose-500",    text: "text-rose-500 dark:text-rose-400",       badge: "bg-rose-500/12 text-rose-600 dark:text-rose-300" },
-  5: { bar: "bg-blue-500",    text: "text-blue-500 dark:text-blue-400",       badge: "bg-blue-500/12 text-blue-600 dark:text-blue-300" },
-  6: { bar: "bg-teal-500",    text: "text-teal-500 dark:text-teal-400",       badge: "bg-teal-500/12 text-teal-600 dark:text-teal-300" },
-}
+/* All domain bars use a single unified accent — primary color with opacity steps */
 
 export default function DashboardPage() {
   const { getModuleStatus, getDomainProgress, overallReadiness } = useModuleProgress()
@@ -81,33 +74,23 @@ export default function DashboardPage() {
       </div>
 
       {/* ── DOMAINS ── */}
-      <section className="glass flex flex-col gap-6 rounded-2xl border border-border bg-card p-6 md:p-8">
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Exam Domains</h2>
-          <span className="text-xs font-mono text-muted-foreground/60">{examDomains.length} domains</span>
-        </div>
+      <section className="glass rounded-2xl border border-border bg-card p-6">
+        <h2 className="mb-5 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Domain Coverage</h2>
 
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-3.5">
           {examDomains.map((d) => {
             const pct = getDomainProgress(d.number)
-            const c = domainAccent[d.number] || domainAccent[1]
             return (
-              <div key={d.number} className="flex flex-col gap-2">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-md text-xs font-bold tabular-nums", c.badge)}>
-                      {d.number}
-                    </span>
-                    <span className="truncate text-[13px] font-medium text-foreground">{d.name}</span>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <span className="text-[10px] font-medium text-muted-foreground">{d.weight}</span>
-                    <span className={cn("min-w-[3ch] text-right text-sm font-bold font-mono tabular-nums", c.text)}>{pct}%</span>
-                  </div>
+              <div key={d.number} className="flex items-center gap-3">
+                <span className="w-5 shrink-0 text-xs font-bold tabular-nums text-muted-foreground">{d.number}</span>
+                <span className="hidden sm:block w-48 shrink-0 truncate text-[13px] text-foreground/80">{d.name}</span>
+                <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-secondary">
+                  <div
+                    className="h-full rounded-full bg-primary/80"
+                    style={{ width: `${Math.max(pct, 2)}%`, transition: "width 0.7s ease-out" }}
+                  />
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-                  <div className={cn("h-full rounded-full", c.bar)} style={{ width: `${Math.max(pct, 3)}%`, transition: "width 0.7s ease-out" }} />
-                </div>
+                <span className="w-10 shrink-0 text-right text-xs font-mono font-semibold tabular-nums text-foreground">{pct}%</span>
               </div>
             )
           })}
