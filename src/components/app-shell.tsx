@@ -19,17 +19,15 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
   const { isMobile, setShellEl } = useSidebar()
 
   const callbackRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      setShellEl(node)
-    },
+    (node: HTMLDivElement | null) => { setShellEl(node) },
     [setShellEl]
   )
 
   return (
     <div ref={callbackRef} className="flex h-screen overflow-hidden bg-background">
       <AppSidebar />
-      <main className="relative flex-1 overflow-y-auto">
-        <div className={`relative mx-auto max-w-7xl px-6 py-8 ${isMobile ? "pt-16" : ""}`}>
+      <main className="flex-1 overflow-y-auto">
+        <div className={`mx-auto max-w-7xl px-6 py-8 ${isMobile ? "pt-16" : ""}`}>
           {children}
         </div>
       </main>
