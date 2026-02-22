@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 160" fill="none">
+  <style>
+    text { font-family: system-ui, -apple-system, sans-serif; }
+    .box { rx: 8; stroke-width: 1.5; }
+    .title { font-size: 12px; font-weight: 600; }
+    .subtitle { font-size: 10px; fill: #94a3b8; }
+    .arrow { stroke: #94a3b8; stroke-width: 1.5; fill: none; marker-end: url(#arrowhead); }
+    .optional { stroke-dasharray: 5,3; }
+  </style>
+  <defs>
+    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <!-- Box 1: Data Source -->
+  <rect x="10" y="30" width="120" height="56" class="box" fill="#fef3c7" stroke="#fbbf24"/>
+  <text x="70" y="55" text-anchor="middle" class="title" fill="#92400e">Data Source</text>
+  <text x="70" y="70" text-anchor="middle" class="subtitle">Blob, SQL, Cosmos</text>
+
+  <!-- Arrow 1 -->
+  <path d="M130,58 L170,58" class="arrow"/>
+
+  <!-- Box 2: Indexer -->
+  <rect x="170" y="30" width="120" height="56" class="box" fill="#dbeafe" stroke="#60a5fa"/>
+  <text x="230" y="55" text-anchor="middle" class="title" fill="#1e40af">Indexer</text>
+  <text x="230" y="70" text-anchor="middle" class="subtitle">Schedules + pulls</text>
+
+  <!-- Arrow 2 -->
+  <path d="M290,58 L330,58" class="arrow"/>
+
+  <!-- Box 3: Skillset (dashed border = optional) -->
+  <rect x="330" y="30" width="120" height="56" class="box optional" fill="#f3e8ff" stroke="#a78bfa"/>
+  <text x="390" y="55" text-anchor="middle" class="title" fill="#6b21a8">Skillset</text>
+  <text x="390" y="70" text-anchor="middle" class="subtitle">(optional enrichment)</text>
+
+  <!-- Arrow 3 -->
+  <path d="M450,58 L490,58" class="arrow"/>
+
+  <!-- Box 4: Search Index -->
+  <rect x="490" y="30" width="130" height="56" class="box" fill="#f0fdf4" stroke="#4ade80"/>
+  <text x="555" y="55" text-anchor="middle" class="title" fill="#166534">Search Index</text>
+  <text x="555" y="70" text-anchor="middle" class="subtitle">Searchable fields</text>
+
+  <!-- Arrow down to Knowledge Store -->
+  <path d="M555,86 L555,110" class="arrow optional"/>
+
+  <!-- Box 5: Knowledge Store -->
+  <rect x="490" y="110" width="130" height="40" class="box optional" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="555" y="135" text-anchor="middle" class="title" fill="#64748b">Knowledge Store</text>
+</svg>

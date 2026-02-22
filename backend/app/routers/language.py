@@ -37,7 +37,7 @@ async def analyze_text(req: AnalyzeRequest):
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         logger.error("Text analysis error", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/translate")
@@ -49,7 +49,7 @@ async def translate_text(req: TranslateRequest):
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         logger.error("Translation error", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/speech-to-text")
@@ -71,7 +71,7 @@ async def speech_to_text(file: UploadFile = File(...)):
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         logger.error("Speech-to-text error", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/text-to-speech")
@@ -83,4 +83,4 @@ async def text_to_speech(req: TTSRequest):
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         logger.error("Text-to-speech error", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")

@@ -51,13 +51,27 @@ async def get_progress():
 @router.post("/complete")
 async def mark_complete(req: CompleteRequest):
     """Mark a lab layer as completed."""
-    data = _read_progress()
-    labs = data.setdefault("labs", {})
-    layers = labs.setdefault(req.lab, {"completed_layers": []})
-    if req.layer not in layers["completed_layers"]:
-        layers["completed_layers"].append(req.layer)
-        layers["completed_layers"].sort()
-    _write_progress(data)
+    # Hold lock across read+write to prevent TOCTOU race condition
+    with _file_lock:
+        if PROGRESS_FILE.exists():
+            try:
+                data = json.loads(PROGRESS_FILE.read_text())
+            except (json.JSONDecodeError, OSError) as e:
+                logger.warning("Failed to read progress file: %s", e)
+                data = {"labs": {}}
+        else:
+            data = {"labs": {}}
+        labs = data.setdefault("labs", {})
+        layers = labs.setdefault(req.lab, {"completed_layers": []})
+        if req.layer not in layers["completed_layers"]:
+            layers["completed_layers"].append(req.layer)
+            layers["completed_layers"].sort()
+        try:
+            PROGRESS_FILE.parent.mkdir(parents=True, exist_ok=True)
+            PROGRESS_FILE.write_text(json.dumps(data, indent=2))
+        except OSError as e:
+            logger.error("Failed to write progress file: %s", e)
+            raise HTTPException(status_code=500, detail="Failed to save progress")
     return {"ok": True, "lab": req.lab, "completed_layers": layers["completed_layers"]}
 
 

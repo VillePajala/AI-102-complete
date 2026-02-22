@@ -1,7 +1,7 @@
 import logging
 
 from pydantic import model_validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +45,7 @@ class Settings(BaseSettings):
     AZURE_CONTENT_SAFETY_ENDPOINT: str = ""
     AZURE_CONTENT_SAFETY_KEY: str = ""
 
-    class Config:
-        env_file = ".env"
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
     @model_validator(mode="after")
     def _warn_missing_credentials(self) -> "Settings":

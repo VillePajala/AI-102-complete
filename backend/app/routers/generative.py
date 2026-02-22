@@ -92,7 +92,7 @@ async def chat(req: ChatRequest):
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         logger.error("Chat endpoint error", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/image", response_model=ImageResponse)
@@ -104,4 +104,4 @@ async def generate_image(req: ImageRequest):
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         logger.error("Image generation error", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")

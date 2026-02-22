@@ -26,10 +26,13 @@ cors_origins = (
     else ["http://localhost:3000"]
 )
 
+# Credentials cannot be used with wildcard origins per CORS spec
+_use_credentials = "*" not in cors_origins
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
-    allow_credentials=True,
+    allow_credentials=_use_credentials,
     allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Content-Type", "Authorization"],
 )

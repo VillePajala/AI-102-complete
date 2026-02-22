@@ -11,6 +11,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { PageHeader } from "@/components/page-header"
+import { LabChecklist } from "@/components/lab-checklist"
+import { LabGuideDrawer } from "@/components/lab-guide-drawer"
 import { api, ApiError } from "@/lib/api"
 import {
   Eye,
@@ -114,6 +116,8 @@ export default function VisionPage() {
         weight="10-15%"
       />
 
+      <LabChecklist labId="vision" />
+
       <div className="flex items-center gap-2">
         {[
           { id: "analyze" as const, label: "Analysis", icon: Eye },
@@ -135,6 +139,8 @@ export default function VisionPage() {
             </Button>
           )
         })}
+        <div className="flex-1" />
+        <LabGuideDrawer labId="vision" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

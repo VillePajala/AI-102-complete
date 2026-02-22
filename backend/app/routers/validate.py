@@ -220,14 +220,14 @@ def _validate_layer(layer_def: dict) -> dict:
             "layer": layer_def["layer"],
             "name": layer_def["name"],
             "status": "error",
-            "message": str(exc),
+            "message": "Unexpected error occurred.",
         }
     except Exception as exc:
         return {
             "layer": layer_def["layer"],
             "name": layer_def["name"],
             "status": "error",
-            "message": str(exc),
+            "message": "Unexpected error occurred.",
         }
 
 
@@ -235,7 +235,7 @@ def _validate_layer(layer_def: dict) -> dict:
 async def validate_lab(lab: str):
     """Validate all layers for a given lab (e.g., /api/validate/01)."""
     if lab not in LAB_LAYERS:
-        return {"lab": lab, "error": f"Unknown lab: {lab}. Valid: {sorted(LAB_LAYERS.keys())}"}
+        return {"lab": lab, "error": "Unknown lab identifier."}
 
     results = [_validate_layer(layer_def) for layer_def in LAB_LAYERS[lab]]
     return {"lab": lab, "layers": results}

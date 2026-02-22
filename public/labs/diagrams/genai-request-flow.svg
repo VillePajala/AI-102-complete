@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 160" fill="none">
+  <style>
+    text { font-family: system-ui, -apple-system, sans-serif; }
+    .box { rx: 8; stroke-width: 1.5; }
+    .label { font-size: 11px; fill: #64748b; }
+    .title { font-size: 12px; font-weight: 600; }
+    .subtitle { font-size: 10px; fill: #94a3b8; }
+    .arrow { stroke: #94a3b8; stroke-width: 1.5; fill: none; marker-end: url(#arrowhead); }
+    .highlight-box { rx: 8; stroke-width: 2; }
+    .badge { font-size: 9px; font-weight: 600; fill: white; }
+  </style>
+  <defs>
+    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <!-- "You build this" badge -->
+  <rect x="430" y="8" width="110" height="22" rx="11" fill="#6366f1"/>
+  <text x="485" y="23" text-anchor="middle" class="badge">YOU BUILD THIS</text>
+  <line x1="485" y1="30" x2="485" y2="52" stroke="#6366f1" stroke-width="1.5" stroke-dasharray="3,3"/>
+
+  <!-- Box 1: Browser -->
+  <rect x="10" y="55" width="120" height="60" class="box" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="70" y="82" text-anchor="middle" class="title" fill="#334155">Browser</text>
+  <text x="70" y="98" text-anchor="middle" class="subtitle">/generative</text>
+
+  <!-- Arrow 1 -->
+  <path d="M130,85 L170,85" class="arrow"/>
+
+  <!-- Box 2: Next.js -->
+  <rect x="170" y="55" width="120" height="60" class="box" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="230" y="82" text-anchor="middle" class="title" fill="#334155">Next.js</text>
+  <text x="230" y="98" text-anchor="middle" class="subtitle">port 3000</text>
+
+  <!-- Arrow 2 -->
+  <path d="M290,85 L330,85" class="arrow"/>
+
+  <!-- Box 3: Router -->
+  <rect x="330" y="55" width="120" height="60" class="box" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="390" y="82" text-anchor="middle" class="title" fill="#334155">Router</text>
+  <text x="390" y="98" text-anchor="middle" class="subtitle">generative.py</text>
+
+  <!-- Arrow 3 -->
+  <path d="M450,85 L470,85" class="arrow"/>
+
+  <!-- Box 4: Service (highlighted) -->
+  <rect x="470" y="52" width="130" height="66" class="highlight-box" fill="#eef2ff" stroke="#6366f1"/>
+  <text x="535" y="82" text-anchor="middle" class="title" fill="#4338ca">Service</text>
+  <text x="535" y="98" text-anchor="middle" style="font-size:10px;fill:#6366f1">openai_service.py</text>
+
+  <!-- Arrow 4 -->
+  <path d="M600,85 L630,85" class="arrow"/>
+
+  <!-- Box 5: Azure OpenAI -->
+  <rect x="630" y="55" width="80" height="60" class="box" fill="#f0fdf4" stroke="#bbf7d0"/>
+  <text x="670" y="78" text-anchor="middle" class="title" fill="#166534">Azure</text>
+  <text x="670" y="92" text-anchor="middle" class="title" fill="#166534">OpenAI</text>
+  <text x="670" y="106" text-anchor="middle" class="subtitle">GPT / DALL-E</text>
+
+  <!-- Response note -->
+  <text x="360" y="150" text-anchor="middle" class="label" style="font-style:italic">Response flows back the same path</text>
+  <path d="M500,130 C500,142 360,150 220,142" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,4" fill="none" marker-end="url(#arrowhead)"/>
+</svg>

@@ -10,6 +10,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { PageHeader } from "@/components/page-header"
+import { LabChecklist } from "@/components/lab-checklist"
+import { LabGuideDrawer } from "@/components/lab-guide-drawer"
 import { api, ApiError } from "@/lib/api"
 import {
   Send,
@@ -61,8 +63,12 @@ export default function GenerativePage() {
   // Templates
   const [templates, setTemplates] = useState<PromptTemplate[]>(() => {
     if (typeof window === "undefined") return defaultTemplates
-    const saved = localStorage.getItem("ai102-prompt-templates")
-    return saved ? JSON.parse(saved) : defaultTemplates
+    try {
+      const saved = localStorage.getItem("ai102-prompt-templates")
+      return saved ? JSON.parse(saved) : defaultTemplates
+    } catch {
+      return defaultTemplates
+    }
   })
   const [editingTemplate, setEditingTemplate] = useState<PromptTemplate | null>(null)
   const [showTemplates, setShowTemplates] = useState(false)
@@ -104,7 +110,6 @@ export default function GenerativePage() {
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : "Failed to connect to backend"
       setError(msg)
-      setMessages([...newMessages, { role: "assistant", content: `Error: ${msg}` }])
     } finally {
       setLoading(false)
     }
@@ -156,6 +161,8 @@ export default function GenerativePage() {
         weight="15-20%"
       />
 
+      <LabChecklist labId="generative" />
+
       {/* Tabs */}
       <div className="flex items-center gap-2">
         <Button
@@ -173,6 +180,7 @@ export default function GenerativePage() {
           <ImageIcon className="size-3.5" /> Image Generation
         </Button>
         <div className="flex-1" />
+        <LabGuideDrawer labId="generative" />
         {activeTab === "chat" && (
           <>
             <Button

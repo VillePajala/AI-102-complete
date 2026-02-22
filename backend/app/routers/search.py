@@ -27,7 +27,7 @@ async def search_query(req: SearchRequest):
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         logger.error("Search query error", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/upload")
@@ -55,4 +55,4 @@ async def upload_document(file: UploadFile = File(...)):
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         logger.error("Document upload error", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")

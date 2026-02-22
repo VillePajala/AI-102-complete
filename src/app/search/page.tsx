@@ -11,6 +11,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { PageHeader } from "@/components/page-header"
+import { LabChecklist } from "@/components/lab-checklist"
+import { LabGuideDrawer } from "@/components/lab-guide-drawer"
 import { api, ApiError } from "@/lib/api"
 import {
   Database,
@@ -90,6 +92,8 @@ export default function SearchPage() {
         weight="15-20%"
       />
 
+      <LabChecklist labId="search" />
+
       <div className="flex flex-wrap items-center gap-2">
         {tabs.map((tab) => {
           const Icon = tab.icon
@@ -104,6 +108,8 @@ export default function SearchPage() {
             </Button>
           )
         })}
+        <div className="flex-1" />
+        <LabGuideDrawer labId="search" />
       </div>
 
       {/* Indexes */}

@@ -11,6 +11,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { PageHeader } from "@/components/page-header"
+import { LabChecklist } from "@/components/lab-checklist"
+import { LabGuideDrawer } from "@/components/lab-guide-drawer"
 import { StatusIndicator } from "@/components/status-indicator"
 import { api, ApiError } from "@/lib/api"
 import {
@@ -154,6 +156,8 @@ export default function RagPage() {
         weight="15-20%"
       />
 
+      <LabChecklist labId="rag" />
+
       <div className="flex items-center gap-2">
         {tabs.map((tab) => {
           const Icon = tab.icon
@@ -168,6 +172,8 @@ export default function RagPage() {
             </Button>
           )
         })}
+        <div className="flex-1" />
+        <LabGuideDrawer labId="rag" />
       </div>
 
       {error && (
@@ -304,7 +310,7 @@ export default function RagPage() {
               <input
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && sendChatMessage()}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); sendChatMessage() } }}
                 placeholder="Ask a question about your documents..."
                 className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
