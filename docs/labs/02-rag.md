@@ -640,7 +640,7 @@ No code test for this layer. Instead, answer these self-check questions:
 - **Know the three search modes:** keyword (full-text), vector, and hybrid. The exam often asks which to use for a given scenario.
 - **Dimensions must match** between the embedding model and the vector field configuration.
 - **Reciprocal Rank Fusion (RRF)** is how Azure AI Search merges keyword and vector results in hybrid mode. You don't need to know the math, but know the name and purpose.
-- **Semantic ranking requires the Semantic plan** (Standard tier or higher, not Free). It is a re-ranker, not a search mode.
+- **Semantic ranking** is available on all tiers (Free includes 1,000 queries/month). It is a re-ranker, not a search mode. For production, the Standard billing plan is recommended.
 - **Embedding models in Azure OpenAI:** `text-embedding-ada-002` (1536 dims), `text-embedding-3-small` (1536), `text-embedding-3-large` (3072). Know that these are separate from chat/completion models.
 
 ---
@@ -851,37 +851,826 @@ def search_documents(query: str) -> list[dict]:
 <!-- section:layer:7 -->
 ## Layer 7: Semantic Ranking
 
-> **Advanced** — This section is a placeholder. Step definitions are tracked in the checklist. Full instructional content coming soon.
+- Configure a semantic configuration on the search index
+- Update `search_documents()` to use semantic ranking
+- Extract reranker scores and captions from results
+- Compare keyword-only vs semantic results side by side
 
-Configure semantic ranking on your search index and update queries to use `query_type='semantic'`. Compare keyword-only results with semantically ranked results.
+### What You Will Learn
+
+- How semantic ranking improves relevance beyond BM25 keyword scoring
+- How to configure semantic ranking in the Azure portal and programmatically
+- How to extract captions and answers from semantically ranked results
+
+> *Exam objective: "Configure semantic ranking"*
+
+> **Note:** Semantic ranking is available on **all tiers including Free** (with a free plan of 1,000 queries/month). For production workloads, the Standard billing plan is recommended.
+
+### Concepts
+
+**Semantic ranking** is a Microsoft-hosted transformer-based re-ranker that sits on top of keyword (or hybrid) search results. It does NOT replace full-text search — it re-scores the top results using deep language understanding.
+
+How it works:
+
+1. You run a normal keyword search (BM25) and get back, say, 50 results
+2. The semantic ranker takes the top 50 and re-reads each result using a pre-trained transformer model
+3. It re-ranks them based on how well the document actually answers the query
+4. It optionally extracts **captions** (the most relevant passage) and **answers** (a direct answer span)
+
+**Requirements:**
+
+| Requirement | Detail |
+|-------------|--------|
+| **Pricing tier** | Available on all tiers (Free tier includes 1,000 semantic queries/month; Standard billing plan recommended for production) |
+| **Semantic configuration** | Must define which fields the ranker should read |
+| **Max reranked** | The ranker processes up to 50 initial results by default |
+
+A **semantic configuration** tells the ranker which fields to use for re-ranking:
+
+- **Title field** — the document title (weighted highest)
+- **Content fields** — the main text fields to analyze (up to 10)
+- **Keyword fields** — fields with short values like tags or categories
+
+**Portal configuration:**
+
+1. Open your search index in the Azure portal
+2. Go to **Semantic configurations** (under the index settings)
+3. Click **Add semantic configuration**
+4. Name it `my-semantic-config`
+5. Set **Title field** to `title`
+6. Add `content` as a **Content field**
+7. Save the configuration
+
+**Programmatic configuration (JSON):**
+
+```json
+{
+  "name": "my-semantic-config",
+  "prioritizedFields": {
+    "titleField": { "fieldName": "title" },
+    "prioritizedContentFields": [
+      { "fieldName": "content" }
+    ],
+    "prioritizedKeywordsFields": []
+  }
+}
+```
 
 <checkpoint id="l7-semantic-config"></checkpoint>
+
+### Implementation
+
+Update `search_documents()` in `search_service.py` to support an optional `use_semantic` parameter. When enabled, the search should use `query_type="semantic"` and specify the semantic configuration name.
+
+You need to:
+
+1. Add a `use_semantic: bool = False` parameter to `search_documents()`
+2. When `use_semantic` is `True`, pass `query_type="semantic"` and `semantic_configuration_name="my-semantic-config"` to `client.search()`
+3. Extract `@search.rerankerScore` and `@search.captions` from each result
+
+<details>
+<summary>Hint: Semantic search parameters</summary>
+
+```python
+def search_documents(query: str, use_semantic: bool = False) -> list[dict]:
+    client = _get_search_client()
+
+    search_kwargs = {
+        "search_text": query,
+        "top": 10,
+        "include_total_count": True,
+        "highlight_fields": "content",
+    }
+
+    if use_semantic:
+        search_kwargs["query_type"] = "semantic"
+        search_kwargs["semantic_configuration_name"] = "my-semantic-config"
+        search_kwargs["query_caption"] = "extractive"
+
+    results = client.search(**search_kwargs)
+
+    items = []
+    for result in results:
+        item = {
+            "content": result.get("content", ""),
+            "score": result.get("@search.score", 0.0),
+        }
+        # Add semantic-specific fields when available
+        if use_semantic:
+            item["reranker_score"] = result.get("@search.rerankerScore", 0.0)
+            captions = result.get("@search.captions")
+            if captions:
+                item["captions"] = [
+                    {"text": c.text, "highlights": c.highlights}
+                    for c in captions
+                ]
+        # ... rest of existing field extraction ...
+        items.append(item)
+    return items
+```
+
+</details>
+
 <checkpoint id="l7-semantic-query"></checkpoint>
+
+### Test It
+
+Compare keyword-only and semantic results to see the difference:
+
+1. Upload several documents with varied content (at least 3-5 documents)
+2. Run a keyword-only search: call `search_documents("your query")` (or use Swagger UI)
+3. Run a semantic search: call `search_documents("your query", use_semantic=True)`
+4. Compare the ordering — semantic ranking often promotes results that better answer the question, even if they have fewer exact keyword matches
+
+**What to look for:**
+
+- `@search.score` (BM25) stays the same, but `@search.rerankerScore` provides a new ranking signal (0-4 scale)
+- Captions show the most relevant passage from each result, saving you from reading the whole document
+- Results with high keyword scores but low semantic relevance get pushed down
+
 <checkpoint id="l7-compare"></checkpoint>
+
+<details>
+<summary>Full Solution</summary>
+
+```python
+def search_documents(query: str, use_semantic: bool = False) -> list[dict]:
+    client = _get_search_client()
+
+    search_kwargs = {
+        "search_text": query,
+        "top": 10,
+        "include_total_count": True,
+        "highlight_fields": "content",
+    }
+
+    if use_semantic:
+        search_kwargs["query_type"] = "semantic"
+        search_kwargs["semantic_configuration_name"] = "my-semantic-config"
+        search_kwargs["query_caption"] = "extractive"
+
+    results = client.search(**search_kwargs)
+    items = []
+    for result in results:
+        item: dict = {
+            "content": result.get("content", ""),
+            "score": result.get("@search.score", 0.0),
+        }
+        if use_semantic:
+            item["reranker_score"] = result.get("@search.rerankerScore", 0.0)
+            captions = result.get("@search.captions")
+            if captions:
+                item["captions"] = [
+                    {"text": c.text, "highlights": c.highlights}
+                    for c in captions
+                ]
+        if result.get("source"):
+            item["source"] = result["source"]
+        highlights = result.get("@search.highlights", {})
+        if highlights and "content" in highlights:
+            item["highlights"] = highlights["content"]
+        metadata = {}
+        for key in ("title", "category", "source"):
+            if result.get(key):
+                metadata[key] = result[key]
+        if metadata:
+            item["metadata"] = metadata
+        items.append(item)
+    return items
+```
+
+</details>
+
+### Exam Tips
+
+- **Semantic ranking is a re-ranker, not a search mode.** It processes the top BM25 results, it does not perform its own retrieval. The exam may present it as an alternative to keyword search — it is not.
+- **Know the tier availability:** Semantic ranking is available on all tiers (including Free with 1,000 queries/month). The exam may test whether you know the free plan exists and its limitations.
+- **Captions vs answers:** Captions extract the most relevant passage. Answers attempt to extract a direct answer span. Both are optional features enabled via `query_caption` and `query_answer` parameters.
+- **Reranker score range is 0--4.** BM25 scores are unbounded positive numbers (not normalized to a fixed range). Higher is better for both.
+- **Semantic configuration is required** — you must define which fields the ranker reads. Without it, semantic queries fail.
+
+---
 
 <!-- section:layer:8 -->
 ## Layer 8: Vector Search with Embeddings
 
-> **Advanced** — This section is a placeholder. Step definitions are tracked in the checklist. Full instructional content coming soon.
+- Deploy an embedding model in Azure OpenAI
+- Implement `get_embedding()` function
+- Add a vector field and vector search configuration to the index schema
+- Modify `upload_document()` to store embeddings
+- Implement vector search with `VectorizedQuery`
 
-Generate embeddings using Azure OpenAI, add a vector field to the search index schema, store embeddings during upload, and implement vector search with `VectorizedQuery`.
+### What You Will Learn
+
+- How to generate text embeddings using Azure OpenAI
+- How to define vector fields and vector search profiles in an index schema
+- How to upload documents with embedding vectors
+- How to execute vector-only search queries
+
+> *Exam objective: "Implement Azure AI Search vector search solution"*
+
+### Concepts
+
+This layer turns the conceptual overview from Layer 5 into working code. You will wire together an embedding model, vector-enabled index schema, and vector search queries.
+
+**Embedding model deployment:**
+
+Deploy `text-embedding-3-small` (1536 dimensions, recommended) or `text-embedding-ada-002` (1536 dimensions, legacy) in your Azure OpenAI resource. Use the Azure portal:
+
+> **Note:** While `text-embedding-ada-002` remains available (no retirement scheduled before April 2027), `text-embedding-3-small` is recommended for new deployments as it offers better performance and supports configurable dimensions.
+
+1. Go to your Azure OpenAI resource > **Model deployments** > **Manage Deployments**
+2. Click **Create new deployment**
+3. Select `text-embedding-3-small` (preferred) or `text-embedding-ada-002`
+4. Name the deployment (e.g., `text-embedding-3-small`) — note this name for your `.env`
+
+Add to `backend/.env`:
+```
+AZURE_OPENAI_EMBEDDING_DEPLOYMENT=text-embedding-3-small
+```
+
+> **Important:** You must also add the `AZURE_OPENAI_EMBEDDING_DEPLOYMENT` field to the `Settings` class in `backend/app/config.py`:
+> ```python
+> AZURE_OPENAI_EMBEDDING_DEPLOYMENT: str = ""
+> ```
+
+**Vector field schema:**
+
+A vector field requires:
+
+| Property | Purpose | Example |
+|----------|---------|---------|
+| `type` | Must be `Collection(Edm.Single)` | Fixed for vector fields |
+| `vector_search_dimensions` | Must match model output | `1536` for ada-002 |
+| `vector_search_profile_name` | Links to a vector search profile | `"my-vector-profile"` |
+
+**Vector search configuration** has three components:
+
+1. **Algorithm configuration** — defines the approximate nearest neighbor (ANN) algorithm (HNSW or exhaustive KNN)
+2. **Vector search profile** — links an algorithm to a field
+3. **Vector field** — the actual field in the index schema
+
+### Implementation
+
+You need to implement four things in sequence.
+
+**Step 1: Implement `get_embedding()`**
+
+Create a function in `search_service.py` (or a new helper) that calls the Azure OpenAI embedding endpoint:
+
+<details>
+<summary>Hint: get_embedding() skeleton</summary>
+
+```python
+from openai import AzureOpenAI
+
+def get_embedding(text: str) -> list[float]:
+    """Generate an embedding vector for the given text."""
+    client = AzureOpenAI(
+        api_key=settings.AZURE_OPENAI_KEY,
+        api_version=settings.AZURE_OPENAI_API_VERSION,
+        azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+    )
+    response = client.embeddings.create(
+        input=text,
+        model=settings.AZURE_OPENAI_EMBEDDING_DEPLOYMENT,
+    )
+    return response.data[0].embedding
+```
+
+</details>
 
 <checkpoint id="l8-embed-func"></checkpoint>
+
+**Step 2: Add vector field to index schema**
+
+You need to recreate (or update) your index with vector search support. Use the `SearchIndexClient` to define the schema programmatically:
+
+<details>
+<summary>Hint: Vector index schema</summary>
+
+```python
+from azure.search.documents.indexes import SearchIndexClient
+from azure.search.documents.indexes.models import (
+    SearchIndex,
+    SearchField,
+    SearchFieldDataType,
+    SimpleField,
+    SearchableField,
+    VectorSearch,
+    HnswAlgorithmConfiguration,
+    VectorSearchProfile,
+)
+
+def create_vector_index() -> None:
+    """Create or update the search index with vector field support."""
+    index_client = SearchIndexClient(
+        endpoint=settings.AZURE_SEARCH_ENDPOINT,
+        credential=AzureKeyCredential(settings.AZURE_SEARCH_KEY),
+    )
+
+    fields = [
+        SimpleField(name="id", type=SearchFieldDataType.String, key=True),
+        SearchableField(name="content", type=SearchFieldDataType.String),
+        SimpleField(
+            name="source", type=SearchFieldDataType.String,
+            filterable=True, retrievable=True,
+        ),
+        SearchableField(
+            name="title", type=SearchFieldDataType.String,
+            filterable=True,
+        ),
+        SimpleField(
+            name="category", type=SearchFieldDataType.String,
+            filterable=True, retrievable=True,
+        ),
+        SearchField(
+            name="contentVector",
+            type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
+            searchable=True,
+            vector_search_dimensions=1536,
+            vector_search_profile_name="my-vector-profile",
+        ),
+    ]
+
+    vector_search = VectorSearch(
+        algorithms=[
+            HnswAlgorithmConfiguration(name="my-hnsw"),
+        ],
+        profiles=[
+            VectorSearchProfile(
+                name="my-vector-profile",
+                algorithm_configuration_name="my-hnsw",
+            ),
+        ],
+    )
+
+    index = SearchIndex(
+        name=settings.AZURE_SEARCH_INDEX,
+        fields=fields,
+        vector_search=vector_search,
+    )
+    index_client.create_or_update_index(index)
+```
+
+</details>
+
 <checkpoint id="l8-vector-field"></checkpoint>
+
+**Step 3: Modify `upload_document()` to store embeddings**
+
+When uploading a document (or chunk), call `get_embedding()` on the content and include the vector in the document dict:
+
+<details>
+<summary>Hint: Upload with embeddings</summary>
+
+```python
+def upload_document(filename: str, content: str) -> None:
+    client = _get_search_client()
+    sanitized = filename.replace(" ", "_").replace(".", "_")
+
+    if len(content) > 1000:
+        chunks = _chunk_text(content)
+        docs = []
+        for i, chunk in enumerate(chunks):
+            docs.append({
+                "id": f"{sanitized}_chunk_{i}",
+                "content": chunk,
+                "contentVector": get_embedding(chunk),  # NEW
+                "source": filename,
+                "title": f"{filename} (part {i + 1})",
+            })
+        client.upload_documents(documents=docs)
+    else:
+        doc = {
+            "id": sanitized,
+            "content": content,
+            "contentVector": get_embedding(content),  # NEW
+            "source": filename,
+            "title": filename,
+        }
+        client.upload_documents(documents=[doc])
+```
+
+</details>
+
 <checkpoint id="l8-vector-upload"></checkpoint>
+
+**Step 4: Implement vector search**
+
+Add a `use_vector` parameter to `search_documents()` and construct a `VectorizedQuery`:
+
+<details>
+<summary>Hint: Vector search query</summary>
+
+```python
+from azure.search.documents.models import VectorizedQuery
+
+def search_documents(
+    query: str,
+    use_semantic: bool = False,
+    use_vector: bool = False,
+) -> list[dict]:
+    client = _get_search_client()
+
+    search_kwargs = {
+        "search_text": query,
+        "top": 10,
+        "include_total_count": True,
+        "highlight_fields": "content",
+    }
+
+    if use_vector:
+        query_vector = get_embedding(query)
+        search_kwargs["vector_queries"] = [
+            VectorizedQuery(
+                vector=query_vector,
+                k_nearest_neighbors=10,
+                fields="contentVector",
+            )
+        ]
+        # For vector-only search, clear search_text (hybrid keeps both)
+        if not use_semantic:
+            search_kwargs["search_text"] = None
+
+    # ... semantic and result processing as before ...
+```
+
+</details>
+
 <checkpoint id="l8-vector-query"></checkpoint>
+
+### Test It
+
+1. Run `create_vector_index()` once to update your index schema. You can run it from the backend directory:
+   ```bash
+   cd backend && python -c "from app.services.search_service import create_vector_index; create_vector_index()"
+   ```
+2. Re-upload your documents — they now include embeddings
+3. Test vector search: call `search_documents("your query", use_vector=True)`
+4. Search for a synonym of a word in your documents (e.g., "automobile" when documents say "car") — vector search should find matches that keyword search misses
+5. Check the Azure portal: your index should now show the `contentVector` field with data
+
+<details>
+<summary>Full Solution</summary>
+
+```python
+from openai import AzureOpenAI
+from azure.core.credentials import AzureKeyCredential
+from azure.search.documents import SearchClient
+from azure.search.documents.models import VectorizedQuery
+from azure.search.documents.indexes import SearchIndexClient
+from azure.search.documents.indexes.models import (
+    SearchIndex,
+    SearchField,
+    SearchFieldDataType,
+    SimpleField,
+    SearchableField,
+    VectorSearch,
+    HnswAlgorithmConfiguration,
+    VectorSearchProfile,
+)
+
+from app.config import settings
+
+
+def get_embedding(text: str) -> list[float]:
+    """Generate an embedding vector for the given text."""
+    client = AzureOpenAI(
+        api_key=settings.AZURE_OPENAI_KEY,
+        api_version=settings.AZURE_OPENAI_API_VERSION,
+        azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+    )
+    response = client.embeddings.create(
+        input=text,
+        model=settings.AZURE_OPENAI_EMBEDDING_DEPLOYMENT,
+    )
+    return response.data[0].embedding
+
+
+def create_vector_index() -> None:
+    """Create or update the search index with vector support."""
+    index_client = SearchIndexClient(
+        endpoint=settings.AZURE_SEARCH_ENDPOINT,
+        credential=AzureKeyCredential(settings.AZURE_SEARCH_KEY),
+    )
+
+    fields = [
+        SimpleField(name="id", type=SearchFieldDataType.String, key=True),
+        SearchableField(name="content", type=SearchFieldDataType.String),
+        SimpleField(
+            name="source", type=SearchFieldDataType.String,
+            filterable=True, retrievable=True,
+        ),
+        SearchableField(
+            name="title", type=SearchFieldDataType.String,
+            filterable=True,
+        ),
+        SimpleField(
+            name="category", type=SearchFieldDataType.String,
+            filterable=True, retrievable=True,
+        ),
+        SearchField(
+            name="contentVector",
+            type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
+            searchable=True,
+            vector_search_dimensions=1536,
+            vector_search_profile_name="my-vector-profile",
+        ),
+    ]
+
+    vector_search = VectorSearch(
+        algorithms=[
+            HnswAlgorithmConfiguration(name="my-hnsw"),
+        ],
+        profiles=[
+            VectorSearchProfile(
+                name="my-vector-profile",
+                algorithm_configuration_name="my-hnsw",
+            ),
+        ],
+    )
+
+    index = SearchIndex(
+        name=settings.AZURE_SEARCH_INDEX,
+        fields=fields,
+        vector_search=vector_search,
+    )
+    index_client.create_or_update_index(index)
+
+
+def upload_document(filename: str, content: str) -> None:
+    client = _get_search_client()
+    sanitized = filename.replace(" ", "_").replace(".", "_")
+
+    if len(content) > 1000:
+        chunks = _chunk_text(content)
+        docs = []
+        for i, chunk in enumerate(chunks):
+            docs.append({
+                "id": f"{sanitized}_chunk_{i}",
+                "content": chunk,
+                "contentVector": get_embedding(chunk),
+                "source": filename,
+                "title": f"{filename} (part {i + 1})",
+            })
+        client.upload_documents(documents=docs)
+    else:
+        doc = {
+            "id": sanitized,
+            "content": content,
+            "contentVector": get_embedding(content),
+            "source": filename,
+            "title": filename,
+        }
+        client.upload_documents(documents=[doc])
+
+
+def search_documents(
+    query: str,
+    use_semantic: bool = False,
+    use_vector: bool = False,
+) -> list[dict]:
+    client = _get_search_client()
+
+    search_kwargs = {
+        "search_text": query,
+        "top": 10,
+        "include_total_count": True,
+        "highlight_fields": "content",
+    }
+
+    if use_vector:
+        query_vector = get_embedding(query)
+        search_kwargs["vector_queries"] = [
+            VectorizedQuery(
+                vector=query_vector,
+                k_nearest_neighbors=10,
+                fields="contentVector",
+            )
+        ]
+        # For vector-only search, clear search_text (hybrid keeps both)
+        if not use_semantic:
+            search_kwargs["search_text"] = None
+
+    if use_semantic:
+        search_kwargs["query_type"] = "semantic"
+        search_kwargs["semantic_configuration_name"] = "my-semantic-config"
+        search_kwargs["query_caption"] = "extractive"
+        # Semantic ranking needs search_text — keep it set even with vectors
+
+    results = client.search(**search_kwargs)
+    items = []
+    for result in results:
+        item: dict = {
+            "content": result.get("content", ""),
+            "score": result.get("@search.score", 0.0),
+        }
+        if use_semantic:
+            item["reranker_score"] = result.get("@search.rerankerScore", 0.0)
+            captions = result.get("@search.captions")
+            if captions:
+                item["captions"] = [
+                    {"text": c.text, "highlights": c.highlights}
+                    for c in captions
+                ]
+        if result.get("source"):
+            item["source"] = result["source"]
+        highlights = result.get("@search.highlights", {})
+        if highlights and "content" in highlights:
+            item["highlights"] = highlights["content"]
+        metadata = {}
+        for key in ("title", "category", "source"):
+            if result.get(key):
+                metadata[key] = result[key]
+        if metadata:
+            item["metadata"] = metadata
+        items.append(item)
+    return items
+```
+
+</details>
+
+### Exam Tips
+
+- **Know the embedding models:** `text-embedding-ada-002` (1536 dims), `text-embedding-3-small` (1536), `text-embedding-3-large` (3072). The exam asks which model to use and what dimension values to configure.
+- **HNSW vs exhaustive KNN:** HNSW (Hierarchical Navigable Small World) is approximate but fast. Exhaustive KNN is exact but slow. HNSW is the default and recommended choice for production.
+- **Vector field type is always `Collection(Edm.Single)`** — this stores a list of 32-bit floats.
+- **The same embedding model must be used at index time and query time.** Mixing models produces meaningless similarity scores.
+- **`k_nearest_neighbors`** controls how many results the vector search returns. This is separate from `top` which controls the final result count.
+- **Vector search does not support highlighting** — there are no token matches to highlight. If you need highlights, use hybrid search (keyword + vector).
+
+---
 
 <!-- section:layer:9 -->
 ## Layer 9: Hybrid Search & Reranking Strategies
 
-> **Expert** — This section is a placeholder. Step definitions are tracked in the checklist. Full instructional content coming soon.
+- Understand how hybrid search combines keyword and vector retrieval
+- Learn how Reciprocal Rank Fusion (RRF) merges ranked lists
+- Understand cross-encoder reranking and when to use it
+- Compare search strategies for different RAG scenarios
 
-Explore hybrid search architectures combining keyword, vector, and semantic ranking. Understand Reciprocal Rank Fusion (RRF) scoring and cross-encoder reranking patterns for production RAG.
+### What You Will Learn
+
+- How hybrid search runs keyword and vector queries simultaneously
+- How RRF scoring works and why it is effective
+- What cross-encoder reranking adds beyond RRF
+- Which search strategy to choose for a given production scenario
+
+> *Exam objective: "Implement a retrieval-augmented generation (RAG) solution"*
+
+### Concepts
+
+This layer is the capstone of the RAG search stack. You have built keyword search (Layer 3), semantic ranking (Layer 7), and vector search (Layer 8). Now you will understand how they combine in production.
+
+**Hybrid Search**
+
+Hybrid search runs **keyword search and vector search simultaneously** in a single query. Azure AI Search executes both searches in parallel, then merges the two ranked result lists into one using a fusion algorithm.
+
+```python
+# Hybrid search: both search_text AND vector_queries are provided
+results = client.search(
+    search_text="car maintenance schedule",        # keyword leg
+    vector_queries=[
+        VectorizedQuery(
+            vector=get_embedding("car maintenance schedule"),  # vector leg
+            k_nearest_neighbors=50,
+            fields="contentVector",
+        )
+    ],
+    top=10,
+)
+```
+
+When `search_text` is provided AND `vector_queries` is provided, Azure AI Search runs both legs and fuses them. This is hybrid search — no special flag needed.
 
 <checkpoint id="l9-hybrid-concept"></checkpoint>
+
+**Reciprocal Rank Fusion (RRF)**
+
+RRF is the algorithm Azure AI Search uses to merge the keyword and vector result lists. The concept is straightforward:
+
+For each document that appears in either list, RRF computes a fused score:
+
+```
+RRF_score(doc) = sum over each list L:  1 / (k + rank_in_L)
+```
+
+Where `k` is a constant (default 60 in Azure AI Search) and `rank_in_L` is the document's position in that list (1-based). If a document does not appear in a list, it contributes 0 from that list.
+
+**Worked example:**
+
+| Document | Keyword Rank | Vector Rank | RRF Score |
+|----------|-------------|-------------|-----------|
+| Doc A | 1 | 5 | 1/(60+1) + 1/(60+5) = 0.0164 + 0.0154 = **0.0318** |
+| Doc B | 10 | 1 | 1/(60+10) + 1/(60+1) = 0.0143 + 0.0164 = **0.0307** |
+| Doc C | 2 | not found | 1/(60+2) + 0 = **0.0161** |
+| Doc D | not found | 2 | 0 + 1/(60+2) = **0.0161** |
+
+Final ranking: Doc A > Doc B > Doc C = Doc D.
+
+**Why RRF works well:**
+
+- It does not require the two score scales to be comparable (BM25 scores and vector cosine similarities are very different scales)
+- Documents that rank well in **both** lists get boosted to the top
+- It is simple, parameter-free (aside from k), and robust across domains
+
 <checkpoint id="l9-rrf"></checkpoint>
+
+**Cross-Encoder Reranking**
+
+A **cross-encoder** is a transformer model that takes a (query, document) pair as input and produces a single relevance score. Unlike bi-encoder embeddings (where query and document are encoded separately), a cross-encoder reads both together, allowing it to capture fine-grained interactions.
+
+In Azure AI Search, **semantic ranking** (Layer 7) functions as a cross-encoder reranker. It re-scores the top results from the initial retrieval (keyword, vector, or hybrid) using a Microsoft-hosted transformer.
+
+**The full reranking pipeline for maximum relevance:**
+
+```
+User query
+    |
+    v
+[Stage 1: Hybrid Search]  -- keyword + vector, fused via RRF
+    |  (top 50 results)
+    v
+[Stage 2: Semantic Ranking]  -- cross-encoder re-scores top 50
+    |  (reranked top 50)
+    v
+[Stage 3: Return top 10]  -- with captions and answers
+```
+
+This three-stage pipeline — hybrid retrieval, RRF fusion, semantic reranking — is the recommended approach for production RAG systems that need the best possible relevance.
+
+**When to skip stages:**
+
+- **Low-latency requirement:** Skip semantic ranking (it adds ~100-200ms latency)
+- **Budget-constrained:** Free tier allows 1,000 semantic queries/month; beyond that, use hybrid without it
+- **Exact-match critical:** Rely more on keyword leg (e.g., product SKU lookup)
+- **Synonym-heavy domain:** Rely more on vector leg (e.g., medical terminology)
+
 <checkpoint id="l9-reranker"></checkpoint>
+
+**Search Strategy Decision Matrix**
+
+| Scenario | Recommended Approach | Why |
+|----------|---------------------|-----|
+| Simple FAQ lookup with exact terms | Keyword only | Users search with exact terms from the FAQ |
+| Semantic search over diverse content | Vector only | Captures meaning across varied vocabulary |
+| General-purpose RAG pipeline | Hybrid (keyword + vector) | Best recall — covers both exact and semantic matches |
+| High-stakes RAG (medical, legal) | Hybrid + semantic ranking | Maximum relevance; worth the latency |
+| Real-time autocomplete | Keyword with prefix matching | Lowest latency, exact prefix matching needed |
+| Multilingual document search | Vector only or hybrid | Embeddings capture cross-language similarity |
+
+**Azure AI Search Search Modes Comparison**
+
+| Mode | `search_text` | `vector_queries` | `query_type` | Fusion |
+|------|---------------|-------------------|--------------|--------|
+| Keyword only | set | omitted | `"simple"` or `"full"` | N/A |
+| Vector only | `None` | set | N/A | N/A |
+| Hybrid | set | set | `"simple"` or `"full"` | RRF |
+| Hybrid + semantic | set | set | `"semantic"` | RRF + semantic reranking |
+| Keyword + semantic | set | omitted | `"semantic"` | Semantic reranking only |
+
+### Self-Check Questions
+
+Test your understanding of hybrid search and reranking:
+
+**Q1.** You run a hybrid search. Document X ranks #3 in the keyword list and #8 in the vector list. Document Y ranks #15 in the keyword list and #1 in the vector list. Using RRF with k=60, which document gets a higher fused score?
+
+**Q2.** A developer sets `search_text="azure compute"` and also provides a `VectorizedQuery` but sets `query_type="semantic"`. What happens? How many stages of processing does this query go through?
+
+**Q3.** Your RAG system returns irrelevant results when users ask questions with domain-specific jargon that does not appear in the documents. The documents use plain language equivalents. Which search leg (keyword or vector) is most likely to fix this, and why?
+
+**Q4.** You are building a RAG system on the Azure AI Search Free tier. A colleague asks whether they can use semantic ranking. What do you tell them about availability and limitations?
+
+<details>
+<summary>Answers</summary>
+
+**A1.** Doc X gets the higher score (0.0306 vs 0.0297):
+- Doc X: 1/(60+3) + 1/(60+8) = 0.0159 + 0.0147 = **0.0306**
+- Doc Y: 1/(60+15) + 1/(60+1) = 0.0133 + 0.0164 = **0.0297**
+
+The strong keyword ranking (#3) combined with decent vector ranking (#8) beats a weak keyword ranking (#15) even with top vector ranking (#1). This illustrates how RRF rewards documents that perform well across both lists.
+
+**A2.** This triggers the full three-stage pipeline: (1) keyword search produces BM25 results, (2) vector search produces nearest-neighbor results, (3) RRF fuses the two lists, (4) semantic ranking re-scores the top fused results using a cross-encoder. The query goes through three processing stages: hybrid retrieval, RRF fusion, and semantic reranking.
+
+**A3.** The **vector leg** is most likely to fix this. Embedding models capture semantic similarity, so domain jargon and its plain-language equivalent will produce similar vectors. Keyword search requires exact token overlap and would miss these matches.
+
+**A4.** Semantic ranking is available on the Free tier (with a 1,000 queries/month free plan), so you can use it for development and testing. For production workloads, you should use the Standard billing plan. Additionally, hybrid search (keyword + vector) with RRF fusion provides strong relevance even without semantic ranking and is available on all tiers with no query limits.
+
+</details>
+
 <checkpoint id="l9-questions"></checkpoint>
+
+### Exam Tips
+
+- **Know the three-stage pipeline:** hybrid retrieval -> RRF fusion -> semantic reranking. The exam tests understanding of this flow.
+- **RRF does not require comparable score scales.** This is a key advantage over simple score averaging. The exam may ask why RRF is used instead of combining raw scores.
+- **Hybrid search is triggered automatically** when both `search_text` and `vector_queries` are provided. There is no separate "hybrid mode" parameter.
+- **Semantic ranking is additive** — it works on top of keyword, vector, or hybrid results. Setting `query_type="semantic"` enables it on whatever retrieval method you are using.
+- **For the exam, "best relevance" almost always means hybrid + semantic ranking.** If a question asks how to maximize search quality for a RAG pipeline, this is the answer.
+- **Know the tier details:** Semantic ranking is available on all tiers. Free tier includes 1,000 semantic queries/month; Standard billing plan is recommended for production.
+
+---
 
 <!-- section:exam-tips -->
 ## Exam Quiz

@@ -109,12 +109,14 @@ Azure Content Safety analyzes text (and images) for harmful content across four 
 | **Sexual** | Sexually explicit or adult content |
 | **Violence** | Content depicting or promoting physical harm, weapons, or cruelty |
 
-Each category returns a **severity score** from 0 to 6:
+Each category returns a **severity score**. By default, the API uses 4 severity levels: **0, 2, 4, 6**. You can request 8 levels (0-7) by setting `outputType="EightSeverityLevels"` in the request.
 
 - **0** — Content is safe
-- **1-2** — Low severity
-- **3-4** — Medium severity
-- **5-6** — High severity
+- **2** — Low severity
+- **4** — Medium severity
+- **6** — High severity
+
+> **Note:** The default output returns only even values (0, 2, 4, 6). The 8-level output returns integers 0 through 7, providing finer granularity.
 
 The SDK provides two key classes:
 
@@ -315,14 +317,16 @@ This maps to AI-102 exam objective: **"Configure content filters"** — understa
 
 The severity scale is central to how Content Safety works in production. You do not just check "is this harmful or not" — you check **how harmful** and make decisions based on thresholds.
 
+With the default 4-level output (0, 2, 4, 6):
+
 | Severity | Label | Meaning | Typical Action |
 |----------|-------|---------|----------------|
 | 0 | Safe | No harmful content detected | Allow |
-| 1-2 | Low | Mildly concerning but generally acceptable | Allow with monitoring |
-| 3-4 | Medium | Moderately harmful content | Review or flag |
-| 5-6 | High | Clearly harmful or dangerous | Block |
+| 2 | Low | Mildly concerning but generally acceptable | Allow with monitoring |
+| 4 | Medium | Moderately harmful content | Review or flag |
+| 6 | High | Clearly harmful or dangerous | Block |
 
-Different applications set different thresholds. A children's platform might block anything above severity 0. An adult content moderation tool might only block severity 5-6. The exam tests your ability to choose the right threshold for a given scenario.
+Different applications set different thresholds. A children's platform might block anything above severity 0. An adult content moderation tool might only block severity 6. The exam tests your ability to choose the right threshold for a given scenario.
 
 ### Implementation
 
@@ -435,7 +439,7 @@ def analyze_text(text: str) -> dict:
 
 - The exam may present a scenario and ask what severity threshold to set. Example: "A customer support chatbot should block clearly harmful content but allow mildly edgy jokes." The answer involves choosing the right threshold (e.g., block severity >= 4).
 - Know that Azure OpenAI content filters use a similar severity scale but are configured differently (through the Azure OpenAI resource, not the Content Safety resource). The exam may test the distinction.
-- The severity scale is 0-6, not 0-10 or 0-100. This is a common detail the exam tests directly.
+- The default severity output uses 4 levels (0, 2, 4, 6). An 8-level mode (0-7) is available via `outputType="EightSeverityLevels"`. The scale is NOT 0-10 or 0-100. This is a common detail the exam tests directly.
 
 ---
 
@@ -620,7 +624,7 @@ After completing all three layers, verify everything works:
 Your `safety_service.py` should now have four implemented pieces:
 
 1. `_get_client()` — helper that creates a `ContentSafetyClient`
-2. `_severity_label()` — maps numeric severity (0-6) to a label string
+2. `_severity_label()` — maps numeric severity to a label string
 3. `analyze_text()` — analyzes text and returns categorized severity results
 4. `check_prompt()` — checks a prompt for harmful content and returns a flagged/unflagged verdict
 
@@ -717,36 +721,735 @@ def check_prompt(prompt: str) -> dict:
 <!-- section:layer:4 -->
 ## Layer 4: Custom Blocklists
 
-> **Advanced** — This section is a placeholder. Step definitions are tracked in the checklist. Full instructional content coming soon.
+- Create a custom blocklist using `BlocklistClient`
+- Add blocklist items (substring-based matching)
+- Integrate blocklist checking into `analyze_text()` calls
+- Design a blocklist strategy for a production content moderation scenario
 
-Review blocklist creation and item management API, understand how to use blocklists in text analysis, and design a blocklist strategy for a production scenario.
+### What You Will Learn
+
+- How to create and manage custom blocklists with the `azure-ai-contentsafety` SDK
+- The difference between severity-based filtering and exact-match blocklists
+- How blocklist item matching works (substring-based, case-insensitive)
+- When to use blocklists versus severity thresholds in production
+
+These map to AI-102 exam objective: **"Implement content moderation solutions"** — specifically using custom blocklists for domain-specific content filtering.
+
+### Concepts
+
+Layers 1-2 used severity-based analysis: Content Safety evaluates text and returns a severity score. But severity analysis is general-purpose — it cannot catch domain-specific terms, competitor brand names, internal project codenames, or regulated vocabulary that your organization needs to always flag.
+
+**Custom blocklists** solve this. A blocklist is a named list of terms that Content Safety will always flag when found in analyzed text, regardless of the severity score.
+
+| Approach | How It Works | Best For |
+|----------|-------------|----------|
+| **Severity-based** | AI model evaluates content context and assigns a 0-6 score | General harmful content detection |
+| **Custom blocklists** | Exact string matching against a maintained list of terms | Domain-specific terms, brand names, regulated words |
+
+Key differences:
+
+- Severity analysis understands **context** — "I'll kill it on stage tonight" scores differently from a threat. Blocklists do **not** understand context — they match strings.
+- Blocklists are **deterministic** — a matched term is always flagged. Severity scores can vary slightly between calls.
+- You can use **both together** in a single `analyze_text()` call by passing `blocklist_names`.
+
+The SDK provides two separate clients:
+
+| Client | Purpose |
+|--------|---------|
+| `ContentSafetyClient` | Analyze text/images (you already use this) |
+| `BlocklistClient` | Create, update, delete blocklists and their items |
+
+Blocklist item matching is **substring-based** (case-insensitive). If a blocklist item's text appears as a substring of the input text, it is flagged.
+
+| Match Type | Behavior | Example Pattern | Matches |
+|------------|----------|-----------------|---------|
+| **Substring** | Case-insensitive substring match | `competitor-brand` | "Try Competitor-Brand today", "competitor-brand is popular" |
+
+### Implementation
+
+Open `backend/app/services/safety_service.py`. You will add three new functions.
+
+**Step 1: Create a blocklist**
+
+Write a function `create_blocklist(name, description)` that:
+
+- Imports `BlocklistClient` from `azure.ai.contentsafety`
+- Creates a `BlocklistClient` using the same endpoint and credential as `_get_client()`
+- Calls `client.create_or_update_text_blocklist()` with the blocklist name and description
+- Returns the created blocklist object
 
 <checkpoint id="l4-blocklist-create"></checkpoint>
+
+**Step 2: Add items and analyze with blocklist**
+
+Write a function `add_blocklist_items(blocklist_name, items)` that:
+
+- Creates a `BlocklistClient`
+- Builds a list of `TextBlocklistItem` objects from the input items (each item has a `text` and optional `description`)
+- Calls `client.add_or_update_blocklist_items()` to add them
+
+Then update or create an `analyze_text_with_blocklist(text, blocklist_names)` function that:
+
+- Calls `_get_client()` to get a `ContentSafetyClient`
+- Creates `AnalyzeTextOptions` with both `text` and `blocklist_names` parameters
+- Calls `client.analyze_text()` and checks `response.blocklists_match` for any matched blocklist items
+- Returns both the standard category results and any blocklist matches
+
 <checkpoint id="l4-blocklist-analyze"></checkpoint>
+
+**Step 3: Design exercise — blocklist strategy**
+
+Before looking at the solution, think through this scenario:
+
+You are building a content moderation system for a healthcare company's patient portal. Patients can post messages to their care team. Design a blocklist strategy:
+
+- What categories of terms would you put in blocklists vs rely on severity filtering?
+- How would you structure your blocklist items for each category?
+- How would you handle updates to the blocklist over time?
+
 <checkpoint id="l4-blocklist-patterns"></checkpoint>
+
+<details><summary>Hint</summary>
+
+```python
+from azure.ai.contentsafety import BlocklistClient
+from azure.ai.contentsafety.models import (
+    AddOrUpdateTextBlocklistItemsOptions,
+    TextBlocklist,
+    TextBlocklistItem,
+    TextCategory,
+)
+
+
+def create_blocklist(name: str, description: str) -> dict:
+    client = BlocklistClient(
+        endpoint=___,
+        credential=AzureKeyCredential(___),
+    )
+    blocklist = client.create_or_update_text_blocklist(
+        blocklist_name=___,
+        options=TextBlocklist(blocklist_name=name, description=___),
+    )
+    return {"name": blocklist.blocklist_name, "description": blocklist.description}
+
+
+def add_blocklist_items(blocklist_name: str, items: list[dict]) -> dict:
+    client = BlocklistClient(
+        endpoint=settings.AZURE_CONTENT_SAFETY_ENDPOINT,
+        credential=AzureKeyCredential(settings.AZURE_CONTENT_SAFETY_KEY),
+    )
+    blocklist_items = [
+        TextBlocklistItem(text=item["text"], description=item.get("description", ""))
+        for item in ___
+    ]
+    result = client.add_or_update_blocklist_items(
+        blocklist_name=___,
+        options=AddOrUpdateTextBlocklistItemsOptions(blocklist_items=___),
+    )
+    return {"added_count": len(result.blocklist_items)}
+
+
+def analyze_text_with_blocklist(text: str, blocklist_names: list[str]) -> dict:
+    client = _get_client()
+    request = AnalyzeTextOptions(text=text, blocklist_names=___)
+    response = client.analyze_text(request)
+
+    # Standard category results using categories_analysis
+    categories = []
+    hate_result = next(
+        (item for item in response.categories_analysis if item.category == TextCategory.HATE), None
+    )
+    self_harm_result = next(
+        (item for item in response.categories_analysis if item.category == TextCategory.SELF_HARM), None
+    )
+    sexual_result = next(
+        (item for item in response.categories_analysis if item.category == TextCategory.SEXUAL), None
+    )
+    violence_result = next(
+        (item for item in response.categories_analysis if item.category == TextCategory.VIOLENCE), None
+    )
+    for name, result in [
+        ("Hate", hate_result),
+        ("SelfHarm", self_harm_result),
+        ("Sexual", sexual_result),
+        ("Violence", violence_result),
+    ]:
+        if result:
+            categories.append({
+                "name": name,
+                "severity": result.severity,
+                "label": _severity_label(result.severity),
+            })
+
+    # Blocklist matches
+    blocklist_matches = []
+    if response.___:
+        for match in response.blocklists_match:
+            blocklist_matches.append({
+                "blocklist_name": match.blocklist_name,
+                "matched_text": match.blocklist_item_text,
+            })
+
+    return {"categories": categories, "blocklist_matches": blocklist_matches}
+```
+
+Things to figure out:
+- What attribute on the response contains blocklist matches? (`blocklists_match`)
+- What parameters does `AnalyzeTextOptions` accept for blocklists? (`blocklist_names` -- a list of strings)
+- How do you access category results? (via `response.categories_analysis` -- a list you filter by `TextCategory`)
+
+</details>
+
+### Test It
+
+1. First, create a blocklist via Swagger UI or a test script:
+   - Call your `create_blocklist()` function with name `"test-blocklist"` and a description
+   - Add items: `[{"text": "competitor-product"}, {"text": "internal-codename"}]`
+
+2. Test analysis with the blocklist:
+   - Call `analyze_text_with_blocklist("Have you tried competitor-product?", ["test-blocklist"])`
+   - The response should include a `blocklist_matches` entry for "competitor-product"
+
+3. Test with text that does not match any blocklist item:
+   - Call `analyze_text_with_blocklist("The weather is nice today", ["test-blocklist"])`
+   - The `blocklist_matches` list should be empty
+
+<details><summary>Full Solution</summary>
+
+Add these imports at the top of the file (alongside existing imports):
+
+```python
+from azure.ai.contentsafety import BlocklistClient
+from azure.ai.contentsafety.models import (
+    AddOrUpdateTextBlocklistItemsOptions,
+    TextBlocklist,
+    TextBlocklistItem,
+    TextCategory,
+)
+```
+
+Add the blocklist functions:
+
+```python
+def create_blocklist(name: str, description: str) -> dict:
+    client = BlocklistClient(
+        endpoint=settings.AZURE_CONTENT_SAFETY_ENDPOINT,
+        credential=AzureKeyCredential(settings.AZURE_CONTENT_SAFETY_KEY),
+    )
+    blocklist = client.create_or_update_text_blocklist(
+        blocklist_name=name,
+        options=TextBlocklist(blocklist_name=name, description=description),
+    )
+    return {"name": blocklist.blocklist_name, "description": blocklist.description}
+
+
+def add_blocklist_items(blocklist_name: str, items: list[dict]) -> dict:
+    client = BlocklistClient(
+        endpoint=settings.AZURE_CONTENT_SAFETY_ENDPOINT,
+        credential=AzureKeyCredential(settings.AZURE_CONTENT_SAFETY_KEY),
+    )
+    blocklist_items = [
+        TextBlocklistItem(text=item["text"], description=item.get("description", ""))
+        for item in items
+    ]
+    result = client.add_or_update_blocklist_items(
+        blocklist_name=blocklist_name,
+        options=AddOrUpdateTextBlocklistItemsOptions(blocklist_items=blocklist_items),
+    )
+    return {"added_count": len(result.blocklist_items)}
+
+
+def analyze_text_with_blocklist(text: str, blocklist_names: list[str]) -> dict:
+    client = _get_client()
+    request = AnalyzeTextOptions(text=text, blocklist_names=blocklist_names)
+    response = client.analyze_text(request)
+
+    categories = []
+    hate_result = next(
+        (item for item in response.categories_analysis if item.category == TextCategory.HATE), None
+    )
+    self_harm_result = next(
+        (item for item in response.categories_analysis if item.category == TextCategory.SELF_HARM), None
+    )
+    sexual_result = next(
+        (item for item in response.categories_analysis if item.category == TextCategory.SEXUAL), None
+    )
+    violence_result = next(
+        (item for item in response.categories_analysis if item.category == TextCategory.VIOLENCE), None
+    )
+    for cat_name, cat_result in [
+        ("Hate", hate_result),
+        ("SelfHarm", self_harm_result),
+        ("Sexual", sexual_result),
+        ("Violence", violence_result),
+    ]:
+        if cat_result:
+            categories.append({
+                "name": cat_name,
+                "severity": cat_result.severity,
+                "label": _severity_label(cat_result.severity),
+            })
+
+    blocklist_matches = []
+    if response.blocklists_match:
+        for match in response.blocklists_match:
+            blocklist_matches.append({
+                "blocklist_name": match.blocklist_name,
+                "matched_text": match.blocklist_item_text,
+            })
+
+    return {"categories": categories, "blocklist_matches": blocklist_matches}
+```
+
+</details>
+
+### Exam Tips
+
+- The exam distinguishes between `ContentSafetyClient` (analyzes content) and `BlocklistClient` (manages blocklists). Know which client does what.
+- Blocklists are passed to `analyze_text()` via the `blocklist_names` parameter — they do not replace severity analysis, they augment it. A single call returns both severity scores and blocklist matches.
+- Blocklist matches appear in `response.blocklists_match`, not in the category results. They are a separate part of the response.
+- For the design exercise: severity analysis handles general harmful content; blocklists handle domain-specific terms. In production, combine both approaches. Blocklist matching is substring-based, so add terms that should always be flagged regardless of context (brand names, codenames, regulated vocabulary).
+
+---
 
 <!-- section:layer:5 -->
 ## Layer 5: Groundedness Detection
 
-> **Advanced** — This section is a placeholder. Step definitions are tracked in the checklist. Full instructional content coming soon.
+- Call the Content Safety groundedness detection API
+- Interpret groundedness scores and apply thresholds
+- Identify three types of hallucination: fabrication, extrapolation, contradiction
+- Integrate groundedness checking into a RAG pipeline pattern
 
-Explore the groundedness detection API and scoring, hallucination detection in RAG pipelines, and integration patterns for grounded response validation.
+### What You Will Learn
+
+- How to use the Azure Content Safety groundedness detection API to validate LLM outputs
+- The three hallucination types and how to detect each
+- How to build a post-generation safety gate that checks whether an LLM response is grounded in source documents
+
+These map to AI-102 exam objective: **"Implement responsible AI practices"** — specifically validating AI-generated outputs for factual grounding and preventing hallucinations.
+
+### Concepts
+
+Layer 3 focused on **input** validation (prompt shielding — catching bad inputs before they reach the model). This layer focuses on **output** validation — catching bad outputs before they reach the user.
+
+Large Language Models can generate text that sounds confident but is factually wrong. This is called **hallucination**. In a Retrieval-Augmented Generation (RAG) pipeline, the LLM is given source documents and asked to answer based on them. Groundedness detection checks whether the LLM's answer actually stays faithful to those source documents.
+
+There are three types of hallucination:
+
+| Hallucination Type | Description | Example |
+|-------------------|-------------|---------|
+| **Fabrication** | The model invents facts that appear nowhere in the source | Source says "Revenue was $10M." Model says "Revenue was $10M and profit was $3M." (profit not mentioned) |
+| **Extrapolation** | The model goes beyond what the source supports with unsupported inferences | Source says "Sales increased in Q1." Model says "Sales will continue to increase in Q2." (not stated) |
+| **Contradiction** | The model states something that directly conflicts with the source | Source says "The policy takes effect January 1." Model says "The policy takes effect March 1." |
+
+The Azure Content Safety groundedness detection REST API takes two key inputs:
+
+- **`groundingSources`** -- the source text (retrieved documents, knowledge base content)
+- **`text`** -- the LLM-generated response to validate
+
+It returns a JSON response with:
+
+- **`ungroundedDetected`** — boolean indicating whether ungrounded content was detected
+- **`ungroundedPercentage`** — float (0.0 to 1.0) indicating what fraction of the response is not grounded in the source
+- **`ungroundedDetails`** — specific sentences or claims flagged as ungrounded
+
+The typical integration pattern in a RAG pipeline:
+
+```
+User query → Retrieve documents → LLM generates response
+    → Groundedness check (response vs source documents)
+        → If grounded: return response to user
+        → If ungrounded: regenerate, flag for review, or return with warning
+```
+
+### Implementation
+
+> **Note:** Groundedness detection is available via **REST API only** (not yet in the stable Python SDK). The examples below use the `requests` library to call the REST endpoint directly.
+
+Open `backend/app/services/safety_service.py`. You will add a `check_groundedness()` function.
+
+**Step 1: Call the groundedness detection REST API**
+
+Write a function `check_groundedness(source_text, generated_text)` that:
+
+- Reads the endpoint and key from `settings`
+- Sends a `POST` request to `{endpoint}/contentsafety/text:detectGroundedness?api-version=2024-09-15-preview`
+- Passes a JSON body with `domain`, `task`, `text`, `groundingSources`, and `reasoning` fields
+- Returns the ungrounded boolean, ungrounded percentage, and any details from the JSON response
 
 <checkpoint id="l5-groundedness-api"></checkpoint>
+
+**Step 2: Identify hallucination types**
+
+Extend your function to classify the type of hallucination when ungrounded content is detected. Based on the ungrounded details, categorize each flagged claim:
+
+- If the claim references information entirely absent from the source: **fabrication**
+- If the claim extends or infers beyond the source: **extrapolation**
+- If the claim directly contradicts the source: **contradiction**
+
+Note: The API provides `ungroundedDetails` but does not automatically classify hallucination type. In production, you would use additional heuristics or a secondary LLM call to classify. For this exercise, return the raw ungrounded details and let the caller decide.
+
 <checkpoint id="l5-hallucination"></checkpoint>
+
+**Step 3: RAG pipeline integration**
+
+Write a wrapper function `validate_rag_response(source_docs, llm_response, threshold)` that:
+
+- Concatenates the source documents into a single source text
+- Calls `check_groundedness()` with the combined source and the LLM response
+- Compares `ungroundedPercentage` against the threshold (default 0.2 -- 20%)
+- Returns a verdict: `"pass"` if grounded, `"fail"` if too much ungrounded content, along with the details
+
 <checkpoint id="l5-integration"></checkpoint>
+
+<details><summary>Hint</summary>
+
+```python
+import requests
+
+
+def check_groundedness(source_text: str, generated_text: str, user_query: str = "") -> dict:
+    endpoint = settings.AZURE_CONTENT_SAFETY_ENDPOINT.rstrip("/")
+    api_key = settings.AZURE_CONTENT_SAFETY_KEY
+    url = f"{endpoint}/contentsafety/text:detectGroundedness?api-version=2024-09-15-preview"
+
+    headers = {
+        "Ocp-Apim-Subscription-Key": api_key,
+        "Content-Type": "application/json",
+    }
+    body = {
+        "domain": "Generic",
+        "task": "QnA",
+        "qna": {"query": ___},  # the user's original question
+        "text": ___,
+        "groundingSources": [___],
+        "reasoning": False,
+    }
+    resp = requests.post(url, headers=headers, json=body)
+    resp.raise_for_status()
+    result = resp.json()
+
+    return {
+        "ungrounded": result["___"],
+        "ungrounded_percentage": result["___"],
+        "ungrounded_details": [
+            {
+                "text": detail.get("text", ""),
+            }
+            for detail in (result.get("___", []))
+        ],
+    }
+
+
+def validate_rag_response(
+    source_docs: list[str],
+    llm_response: str,
+    threshold: float = 0.2,
+) -> dict:
+    combined_source = "\n\n".join(___)
+    result = check_groundedness(___, ___)
+
+    verdict = "pass" if result["ungrounded_percentage"] <= ___ else "fail"
+
+    return {
+        "verdict": verdict,
+        "ungrounded_percentage": result["ungrounded_percentage"],
+        "threshold": threshold,
+        "details": result["ungrounded_details"],
+    }
+```
+
+Things to figure out:
+- What URL path calls the groundedness API? (`/contentsafety/text:detectGroundedness`)
+- What JSON fields are in the request body? (`domain`, `task`, `text`, `groundingSources`, `reasoning`)
+- What fields are in the JSON response? (`ungroundedDetected`, `ungroundedPercentage`, `ungroundedDetails`)
+
+</details>
+
+### Test It
+
+1. Prepare a grounded test case:
+
+```python
+source = "Azure Content Safety is a service that detects harmful content. It analyzes text across four categories: Hate, SelfHarm, Sexual, and Violence. Each category returns a severity score from 0 to 6."
+
+grounded_response = "Azure Content Safety analyzes text across four categories and returns severity scores from 0 to 6."
+
+ungrounded_response = "Azure Content Safety analyzes text across ten categories and can also translate content into 50 languages."
+```
+
+2. Test via Swagger UI or a script:
+   - Call `check_groundedness(source, grounded_response)` -- should return `ungrounded: false` with a low `ungrounded_percentage`
+   - Call `check_groundedness(source, ungrounded_response)` -- should return `ungrounded: true` because the response fabricates "ten categories" and "translate content"
+
+3. Test the RAG validation wrapper:
+   - Call `validate_rag_response([source], grounded_response)` — should return `verdict: "pass"`
+   - Call `validate_rag_response([source], ungrounded_response, threshold=0.1)` — should return `verdict: "fail"`
+
+<details><summary>Full Solution</summary>
+
+Add this import at the top of the file:
+
+```python
+import requests
+```
+
+Add the groundedness functions:
+
+```python
+def check_groundedness(source_text: str, generated_text: str, user_query: str = "") -> dict:
+    endpoint = settings.AZURE_CONTENT_SAFETY_ENDPOINT.rstrip("/")
+    api_key = settings.AZURE_CONTENT_SAFETY_KEY
+    url = f"{endpoint}/contentsafety/text:detectGroundedness?api-version=2024-09-15-preview"
+
+    headers = {
+        "Ocp-Apim-Subscription-Key": api_key,
+        "Content-Type": "application/json",
+    }
+    body = {
+        "domain": "Generic",
+        "task": "QnA",
+        "qna": {"query": user_query},  # the user's original question
+        "text": generated_text,
+        "groundingSources": [source_text],
+        "reasoning": False,
+    }
+    resp = requests.post(url, headers=headers, json=body)
+    resp.raise_for_status()
+    result = resp.json()
+
+    return {
+        "ungrounded": result["ungroundedDetected"],
+        "ungrounded_percentage": result["ungroundedPercentage"],
+        "ungrounded_details": [
+            {
+                "text": detail.get("text", ""),
+            }
+            for detail in (result.get("ungroundedDetails", []))
+        ],
+    }
+
+
+def validate_rag_response(
+    source_docs: list[str],
+    llm_response: str,
+    threshold: float = 0.2,
+) -> dict:
+    combined_source = "\n\n".join(source_docs)
+    result = check_groundedness(combined_source, llm_response)
+
+    verdict = "pass" if result["ungrounded_percentage"] <= threshold else "fail"
+
+    return {
+        "verdict": verdict,
+        "ungrounded_percentage": result["ungrounded_percentage"],
+        "threshold": threshold,
+        "details": result["ungrounded_details"],
+    }
+```
+
+</details>
+
+### Exam Tips
+
+- The exam may present a RAG scenario and ask how to validate that the AI's response is based on the retrieved documents. The answer involves groundedness detection.
+- Know the difference between **input safety** (prompt shields, content analysis before the model) and **output safety** (groundedness detection, content analysis after the model). Both are part of responsible AI architecture.
+- Groundedness detection requires access to the **source documents** — you cannot check groundedness without knowing what the response should be grounded in. This is why it is specifically useful in RAG pipelines where you have the retrieved context.
+- The `ungrounded_percentage` threshold is configurable. Stricter applications (medical, legal) use lower thresholds (e.g., 0.05). General Q&A can tolerate higher thresholds (e.g., 0.2-0.3).
+
+---
 
 <!-- section:layer:6 -->
 ## Layer 6: RAI Governance & Compliance
 
-> **Expert** — This section is a placeholder. Step definitions are tracked in the checklist. Full instructional content coming soon.
+- Understand Microsoft's six Responsible AI principles and how they map to labs in this course
+- Know what transparency notes are, when they are required, and what they contain
+- Understand impact assessments: purpose, stakeholder analysis, harm/benefit evaluation
+- Compare Azure OpenAI content filtering vs Azure Content Safety service in detail
 
-Deep-dive into Microsoft Responsible AI principles, transparency notes, impact assessments, and Azure OpenAI content filtering configuration.
+### What You Will Learn
+
+- The six Microsoft Responsible AI principles and their practical application
+- How transparency notes and impact assessments fit into AI governance
+- The detailed differences between Azure OpenAI's built-in content filtering and the standalone Content Safety service
+
+These map to AI-102 exam objective: **"Plan and manage an Azure AI solution"** — specifically responsible AI governance, compliance requirements, and content filtering configuration.
+
+### Concepts
+
+#### The Six Responsible AI Principles
+
+Microsoft's Responsible AI framework defines six principles that guide the design, development, and deployment of AI systems. These principles are not abstract ideals — they have concrete implementations in Azure services and are directly tested on the AI-102 exam.
 
 <checkpoint id="l6-rai-principles"></checkpoint>
+
+| Principle | Description | How It Maps to This Course |
+|-----------|-------------|---------------------------|
+| **Fairness** | AI systems should treat all people equitably. Models should not produce biased results based on race, gender, age, or other protected attributes. | Lab 02 (RAG) — grounding responses in factual sources reduces bias. Lab 07 (this lab) — Content Safety detects hate speech and discriminatory content. |
+| **Reliability & Safety** | AI systems should perform reliably and safely under expected conditions. Systems must handle errors gracefully and not cause harm. | Lab 03 (Knowledge Mining) — structured indexing produces consistent retrieval. Lab 07 — prompt shields prevent adversarial manipulation. |
+| **Privacy & Security** | AI systems should respect privacy and be secure. Personal data must be handled according to regulations, and systems must resist attacks. | Lab 06 (Agents) — agent boundaries prevent unauthorized data access. Backend `.env` pattern — keys and credentials are never committed to source control. |
+| **Inclusiveness** | AI systems should empower everyone and engage people. Accessibility and multilingual support are essential. | Lab 05 (Language & Speech) — Speech-to-Text and translation enable access for diverse users. |
+| **Transparency** | People should understand how AI systems work and make decisions. Explainability and documentation are required. | Lab 01 (GenAI) — prompt engineering makes model behavior explicit. Transparency notes (covered below) document system capabilities and limitations. |
+| **Accountability** | People should be accountable for AI systems. Organizations must establish governance processes and oversight. | Impact assessments (covered below) ensure human review. Azure OpenAI content filtering provides automated guardrails with human-configurable thresholds. |
+
+#### Transparency Notes
+
+A transparency note is a document that accompanies an AI service or model deployment. It communicates to stakeholders what the system can do, what it cannot do, and where it may fail.
+
 <checkpoint id="l6-transparency-notes"></checkpoint>
+
+**When transparency notes are required:**
+
+- Deploying any Azure AI service in production
+- Providing AI capabilities to end users (especially in regulated industries)
+- Using AI for decisions that affect people (hiring, lending, healthcare)
+
+**What a transparency note contains:**
+
+| Section | Purpose |
+|---------|---------|
+| **Introduction** | What the system does, who it is for |
+| **Capabilities & Limitations** | What the AI can and cannot reliably do |
+| **Intended Uses** | Approved use cases the system was designed for |
+| **Unintended Uses** | Use cases the system was NOT designed for and should NOT be used for |
+| **Performance Characteristics** | Accuracy metrics, known error rates, bias evaluations |
+| **Best Practices** | Guidance for integrators on how to use the system responsibly |
+| **Feedback Mechanisms** | How users can report errors or provide feedback |
+
+Microsoft publishes transparency notes for every Azure AI service. For example, the Content Safety transparency note documents the accuracy of severity detection across different languages and content types.
+
+#### Impact Assessments
+
+An impact assessment evaluates the potential effects of an AI system on stakeholders before deployment. It is a governance process, not a technical tool.
+
+**Purpose:** Identify risks, benefits, and mitigation strategies before an AI system goes live.
+
+**Key components:**
+
+| Component | Questions to Answer |
+|-----------|-------------------|
+| **Stakeholder Analysis** | Who is affected by this system? Users, subjects of AI decisions, operators, bystanders? |
+| **Harm Evaluation** | What harms could the system cause? Discrimination, privacy violations, misinformation, safety risks? |
+| **Benefit Evaluation** | What benefits does the system provide? Who benefits most? Are benefits equitably distributed? |
+| **Mitigation Strategies** | How will identified harms be prevented or reduced? What technical controls (content filtering, groundedness checks) and process controls (human review, escalation) are in place? |
+| **Monitoring Plan** | How will the system be monitored after deployment? What metrics will be tracked? How will feedback be collected? |
+
+Example: Before deploying the Content Safety analysis from this lab in production, an impact assessment would ask: "What happens if the system incorrectly flags safe content as harmful (false positive)? What happens if it misses genuinely harmful content (false negative)? What are the consequences of each, and how do we mitigate them?"
+
+#### Azure OpenAI Content Filtering vs Content Safety Service
+
+This is a critical distinction on the AI-102 exam. Both provide content moderation, but they serve different purposes and are configured differently.
+
 <checkpoint id="l6-content-filtering"></checkpoint>
+
+| Aspect | Azure OpenAI Content Filtering | Azure Content Safety Service |
+|--------|-------------------------------|------------------------------|
+| **What it is** | Built-in filters that run automatically on every Azure OpenAI API call | A standalone Azure service you call explicitly via SDK/REST |
+| **When it runs** | Automatically on model inputs AND outputs — no code needed | Only when you explicitly call it in your application code |
+| **What it filters** | Same four categories: Hate, SelfHarm, Sexual, Violence | Same four categories, plus custom blocklists, prompt shields, groundedness |
+| **How to configure** | Azure OpenAI Studio → Deployments → Content filters → set severity thresholds per category | Code-level: set thresholds in your application logic based on API response |
+| **Customization** | Choose severity threshold per category (Low/Medium/High/Off) per deployment | Full programmatic control — custom blocklists, custom thresholds, combine with other logic |
+| **Scope** | Only protects Azure OpenAI model calls | Protects any text in your application (user comments, uploaded documents, chat messages) |
+| **Blocklists** | Not supported in content filters | Supported via `BlocklistClient` (Layer 4) |
+| **Prompt Shields** | Available as an add-on filter in Azure OpenAI | Available via Content Safety API |
+| **Groundedness** | Not included | Available via REST API (Layer 5) |
+| **Cost** | Included in Azure OpenAI pricing | Separate Content Safety pricing (Free F0 tier available) |
+
+**When to use which:**
+
+- **Azure OpenAI Content Filtering:** Always keep enabled on your Azure OpenAI deployments. It is your first line of defense for model inputs and outputs. Configure appropriate severity thresholds per deployment.
+- **Azure Content Safety Service:** Use for analyzing user-generated content that is NOT going through Azure OpenAI (e.g., forum posts, uploaded documents, chat messages). Also use for advanced features: custom blocklists, groundedness detection, programmatic analysis.
+- **Both together:** In a production RAG pipeline, Azure OpenAI content filters protect the model call, while Content Safety groundedness detection validates the output against source documents.
+
+Illustrative code showing the two approaches:
+
+```python
+# Approach 1: Azure OpenAI with built-in content filtering
+# Content filters run automatically — no extra code needed.
+# Configure thresholds in Azure OpenAI Studio.
+from openai import AzureOpenAI
+
+client = AzureOpenAI(
+    azure_endpoint=endpoint,
+    api_key=api_key,
+    api_version="2024-10-21",
+)
+
+# This call is automatically filtered by Azure OpenAI content filters.
+# If input or output exceeds configured thresholds, the API returns
+# a content_filter_results object (or blocks the request entirely).
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": user_input}],
+)
+
+# Check if content was filtered
+if response.choices[0].finish_reason == "content_filter":
+    print("Response was filtered by Azure OpenAI content filters")
+
+
+# Approach 2: Azure Content Safety for explicit analysis
+# You call this yourself for user-generated content.
+from azure.ai.contentsafety import ContentSafetyClient
+from azure.ai.contentsafety.models import AnalyzeTextOptions
+
+safety_client = ContentSafetyClient(endpoint=cs_endpoint, credential=credential)
+result = safety_client.analyze_text(AnalyzeTextOptions(text=user_comment))
+# You decide what to do with the severity scores
+```
+
+### Self-Check Questions
+
+**Q1.** A healthcare company is deploying an AI chatbot that helps patients understand their lab results. Which Responsible AI principle is MOST critical to address first, and what specific action should they take?
+
+<details><summary>Answer</summary>
+
+**Reliability & Safety** is most critical. The chatbot must not provide incorrect medical interpretations that could lead patients to make harmful health decisions. Specific actions: implement groundedness detection to validate responses against verified medical sources, set strict content filtering thresholds, require human review for any response the system has low confidence in, and publish a transparency note documenting the chatbot's limitations (e.g., "This system provides general information and is not a substitute for medical advice").
+
+Fairness is also critical (the system must work equally well across demographics), but reliability and safety is the most immediate concern given the potential for direct harm.
+
+</details>
+
+**Q2.** Your organization has an Azure OpenAI deployment with content filters set to block severity >= 4 across all categories. A user reports that the model sometimes generates mildly inappropriate jokes (severity 2-3). Your manager asks you to also block these. Where do you make this change?
+
+<details><summary>Answer</summary>
+
+In **Azure OpenAI Studio** (or via the Azure OpenAI management API). Navigate to your deployment's content filter configuration and lower the threshold from "Medium" to "Low" for the relevant categories. This change happens at the Azure OpenAI resource level, not in the Content Safety service. The built-in content filters are configured per deployment — you do not need to change any application code.
+
+If you needed more granular control (like blocking specific terms), you would use the Content Safety service's custom blocklists in addition to the Azure OpenAI filters.
+
+</details>
+
+**Q3.** What is the key difference between a transparency note and an impact assessment?
+
+<details><summary>Answer</summary>
+
+A **transparency note** is a document that describes the AI system's capabilities, limitations, and intended uses — it communicates what the system IS. An **impact assessment** is a governance process that evaluates the potential effects (harms and benefits) of deploying the system — it evaluates what the system DOES to stakeholders.
+
+Transparency notes are published and shared with users/integrators. Impact assessments are internal governance documents used for decision-making before deployment. Both are required for responsible AI deployment, but they serve different purposes and audiences.
+
+</details>
+
+**Q4.** You are building a RAG-based Q&A system. You want to ensure the LLM does not hallucinate. You have configured Azure OpenAI content filters on your deployment. Is this sufficient to prevent hallucinations? Why or why not?
+
+<details><summary>Answer</summary>
+
+**No, this is not sufficient.** Azure OpenAI content filters detect harmful content (hate, violence, etc.) — they do NOT detect hallucinations. A hallucinated response can be perfectly polite and non-harmful while being factually wrong.
+
+To prevent hallucinations, you need the **groundedness detection** feature from the Azure Content Safety service (Layer 5). After the LLM generates a response, you call the groundedness detection REST API with the source documents and the generated text to check whether the response is faithful to the sources. Content filters and groundedness detection address different problems: content filters block harmful content, groundedness detection blocks inaccurate content.
+
+</details>
+
 <checkpoint id="l6-questions"></checkpoint>
+
+### Exam Tips
+
+- The six RAI principles are directly tested. Expect scenario questions like: "A company discovers their AI system performs poorly for non-English speakers. Which RAI principle is being violated?" (Answer: Inclusiveness and Fairness.)
+- Know that transparency notes are published by Microsoft for each Azure AI service. The exam may ask what information they contain or when they should be created for custom deployments.
+- The Azure OpenAI content filtering vs Content Safety service distinction is a high-frequency exam topic. Remember: content filtering is automatic and built-in; Content Safety is explicit and standalone. They use the same four categories but are configured differently.
+- Impact assessments are a governance requirement, not a technical feature. The exam may present a scenario and ask what governance step is missing — the answer is often "conduct an impact assessment before deployment."
+
+---
 
 <!-- section:exam-tips -->
 ## Exam Quiz
@@ -775,7 +1478,7 @@ D) Block severity >= 6
 
 <details><summary>Answer</summary>
 
-**C) Block severity >= 4** — Severity 0 is safe, 1-2 is low (mildly concerning), 3-4 is medium, 5-6 is high. Blocking at >= 4 allows low-severity content (mildly edgy humor) while blocking medium and high severity. Blocking at >= 0 would block everything. Blocking at >= 6 would only block the most extreme content.
+**C) Block severity >= 4** — With the default 4-level output: 0 is safe, 2 is low, 4 is medium, 6 is high. Blocking at >= 4 allows low-severity content (mildly edgy humor) while blocking medium and high severity. Blocking at >= 0 would block everything. Blocking at >= 6 would only block the most extreme content.
 
 </details>
 
@@ -812,7 +1515,7 @@ D) Content categories
 |---------|----------------|----------------|
 | `ContentSafetyClient` creation | `_get_client()` with endpoint + credential | Client setup question type |
 | Four content categories | Hate, SelfHarm, Sexual, Violence | Memorize these — directly tested |
-| Severity scale (0-6) | `_severity_label()` mapping | Threshold selection scenarios |
+| Severity scale (default 4-level: 0, 2, 4, 6) | `_severity_label()` mapping | Threshold selection scenarios |
 | Text analysis | `client.analyze_text()` with `AnalyzeTextOptions` | Core Content Safety API |
 | Prompt shielding | `check_prompt()` with severity threshold | Responsible AI architecture |
 

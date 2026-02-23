@@ -624,36 +624,635 @@ def chat_with_tools(
 <!-- section:layer:4 -->
 ## Layer 4: Streaming Responses
 
-> **Advanced** — This section is a placeholder. Step definitions are tracked in the checklist. Full instructional content coming soon.
+- Implement streaming chat completion with stream=True
+- Return Server-Sent Events (SSE) from the FastAPI endpoint
+- Test streaming output in the frontend
 
-Implement streaming chat completions using `stream=True` and return Server-Sent Events from the FastAPI endpoint, enabling real-time token-by-token output in the frontend.
+> **What you will learn**
+> - How to switch from buffered to streaming chat completions
+> - How to read `ChatCompletionChunk` delta objects as they arrive
+> - How to build a FastAPI Server-Sent Events (SSE) endpoint with `StreamingResponse`
+>
+> *Exam objective: "Implement solutions that use Azure OpenAI" — understanding streaming response patterns and real-time token delivery.*
+
+### Concepts
+
+By default, `client.chat.completions.create()` waits for the entire response to be generated before returning. With `stream=True`, the API returns an iterator of **chunks** instead, each containing a small piece (delta) of the response. This enables token-by-token output in the frontend — the user sees text appearing as it is generated rather than waiting for the full response.
+
+| Mode | Return Type | Behavior |
+|------|------------|----------|
+| `stream=False` (default) | `ChatCompletion` | Blocks until the full response is ready. `response.choices[0].message.content` contains the complete text. |
+| `stream=True` | Iterator of `ChatCompletionChunk` | Yields chunks as they are generated. Each chunk has `choices[0].delta.content` with a small piece of text (often a single token). |
+
+Each `ChatCompletionChunk` has this structure:
+
+```python
+chunk.choices[0].delta.content  # str | None — the new token(s)
+chunk.choices[0].delta.role     # str | None — only set in the first chunk
+chunk.choices[0].finish_reason  # str | None — "stop" in the last chunk, None otherwise
+```
+
+To deliver chunks to the browser, the standard pattern is **Server-Sent Events (SSE)**. SSE is a simple HTTP-based protocol where the server sends a stream of `data: ...\n\n` messages over a long-lived connection. FastAPI supports this via `StreamingResponse` with `media_type="text/event-stream"`.
+
+SSE message format:
+```
+data: {"content": "Hello"}\n\n
+data: {"content": " world"}\n\n
+data: [DONE]\n\n
+```
+
+### Implementation
+
+You will add two things: a generator function in the service file and an SSE endpoint in the router.
+
+**Step 1: Implement `chat_completion_stream()` in `openai_service.py`**
+
+Create a new generator function below `chat_completion()` that:
+
+- Accepts the same parameters as `chat_completion()` (messages, model, temperature, etc.)
+- Calls `client.chat.completions.create()` with `stream=True`
+- Iterates over the returned chunks
+- For each chunk, checks if `choices[0].delta.content` is not `None`
+- Yields each non-None content string
 
 <checkpoint id="l4-stream-impl"></checkpoint>
+
+**Step 2: Create an SSE endpoint in the generative router**
+
+Open `backend/app/routers/generative.py` and add a new endpoint `POST /api/generative/chat/stream` that:
+
+- Accepts the same request body as the existing `/chat` endpoint
+- Calls `chat_completion_stream()` to get the generator
+- Wraps the generator in a helper that formats each chunk as an SSE `data:` line (JSON with a `content` field)
+- Sends a final `data: [DONE]\n\n` message when the generator is exhausted
+- Returns a `StreamingResponse` with `media_type="text/event-stream"`
+
 <checkpoint id="l4-stream-sse"></checkpoint>
+
+<details><summary>Hint — skeleton code</summary>
+
+**Service function (`openai_service.py`):**
+
+```python
+from collections.abc import Generator
+
+def chat_completion_stream(
+    messages: list[dict],
+    model: str | None = None,
+    temperature: float = 0.7,
+    top_p: float = 1.0,
+    max_tokens: int = 800,
+    frequency_penalty: float = 0.0,
+    presence_penalty: float = 0.0,
+) -> Generator[str, None, None]:
+    client = _get_client()
+    deployment = model if model else settings.AZURE_OPENAI_DEPLOYMENT
+    stream = client.chat.completions.create(
+        model=___,
+        messages=___,
+        temperature=___,
+        top_p=___,
+        max_tokens=___,
+        frequency_penalty=___,
+        presence_penalty=___,
+        stream=___,
+    )
+    for ___ in stream:
+        if not chunk.choices:  # Azure content filtering may send empty choices
+            continue
+        content = chunk.choices[0].___.___
+        if content is not ___:
+            yield ___
+```
+
+**Router endpoint (`generative.py`):**
+
+```python
+import json
+from fastapi.responses import StreamingResponse
+
+@router.post("/chat/stream")
+async def chat_stream(req: ChatRequest):
+    gen = openai_service.chat_completion_stream(
+        messages=[m.model_dump() for m in req.messages],
+        temperature=req.temperature,
+        # ... pass all parameters
+    )
+
+    def event_generator():
+        for token in ___:
+            yield f"data: {json.dumps({'content': ___})}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(___, media_type="___")
+```
+
+</details>
+
+### Test It
+
+> 1. Restart the backend server after adding the new endpoint
+> 2. Test with `curl` to see the raw SSE stream:
+>    ```bash
+>    curl -N -X POST http://localhost:8000/api/generative/chat/stream \
+>      -H "Content-Type: application/json" \
+>      -d '{"messages": [{"role": "user", "content": "Count from 1 to 10 slowly"}]}'
+>    ```
+> 3. You should see `data: {"content": "..."}` lines appearing one by one
+> 4. The stream should end with `data: [DONE]`
+> 5. If the frontend supports streaming, test there as well — text should appear token by token
+>
+> **No output?** Check that you set `stream=True` in the `create()` call.
+> **All text at once?** Make sure your `StreamingResponse` uses `media_type="text/event-stream"` and you are yielding individual chunks, not accumulating them.
+
 <checkpoint id="l4-stream-test"></checkpoint>
+
+<details><summary>Full Solution</summary>
+
+**Add to `openai_service.py`** (after `chat_completion`):
+
+```python
+from collections.abc import Generator
+
+
+def chat_completion_stream(
+    messages: list[dict],
+    model: str | None = None,
+    temperature: float = 0.7,
+    top_p: float = 1.0,
+    max_tokens: int = 800,
+    frequency_penalty: float = 0.0,
+    presence_penalty: float = 0.0,
+) -> Generator[str, None, None]:
+    client = _get_client()
+    deployment = model if model else settings.AZURE_OPENAI_DEPLOYMENT
+    stream = client.chat.completions.create(
+        model=deployment,
+        messages=messages,
+        temperature=temperature,
+        top_p=top_p,
+        max_tokens=max_tokens,
+        frequency_penalty=frequency_penalty,
+        presence_penalty=presence_penalty,
+        stream=True,
+    )
+    for chunk in stream:
+        if not chunk.choices:  # Azure content filtering may send empty choices
+            continue
+        content = chunk.choices[0].delta.content
+        if content is not None:
+            yield content
+```
+
+**Add to `generative.py` router:**
+
+```python
+import json
+from fastapi.responses import StreamingResponse
+
+
+@router.post("/chat/stream")
+async def chat_stream(req: ChatRequest):
+    gen = openai_service.chat_completion_stream(
+        messages=[m.model_dump() for m in req.messages],
+        model=req.model,
+        temperature=req.temperature,
+        top_p=req.top_p,
+        max_tokens=req.max_tokens,
+        frequency_penalty=req.frequency_penalty,
+        presence_penalty=req.presence_penalty,
+    )
+
+    def event_generator():
+        for token in gen:
+            yield f"data: {json.dumps({'content': token})}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+```
+
+</details>
+
+> **Exam Tips**
+> - The exam may ask about the difference between synchronous and streaming responses. Know that streaming uses Server-Sent Events (SSE) and returns partial results as they are generated.
+> - Streaming does not change the total number of tokens consumed — the same prompt and completion tokens are used regardless of whether you stream.
+> - In production, streaming improves perceived latency (time-to-first-token) but does not reduce total generation time. The exam may test this distinction.
+> - Know that each chunk's `finish_reason` is `None` until the final chunk, which has `finish_reason="stop"`. This is how the client knows the stream is complete.
+
+---
 
 <!-- section:layer:5 -->
 ## Layer 5: Token Counting & Cost Estimation
 
-> **Advanced** — This section is a placeholder. Step definitions are tracked in the checklist. Full instructional content coming soon.
+- Use tiktoken to count prompt/completion tokens
+- Return token usage and estimated cost in API response
+- Verify token counts match Azure usage metadata
 
-Use the `tiktoken` library to count prompt and completion tokens, then return token usage and estimated cost alongside each API response.
+> **What you will learn**
+> - How to use the `tiktoken` library to pre-count tokens before sending a request
+> - How to read the `usage` object from the API response to get actual token counts
+> - How to calculate estimated cost based on model pricing
+>
+> *Exam objective: "Configure Azure OpenAI model parameters" — understanding token limits, usage tracking, and cost management for Azure OpenAI deployments.*
+
+### Concepts
+
+Every Azure OpenAI API call consumes **tokens** — units of text that the model processes. Understanding token usage is critical for cost management, staying within rate limits, and ensuring prompts fit within the model's context window.
+
+**tiktoken** is OpenAI's open-source tokenizer library. It lets you count tokens locally before making an API call. Each model family uses a specific encoding:
+
+| Model | Encoding | Package |
+|-------|----------|---------|
+| `gpt-4o`, `gpt-4o-mini` | `o200k_base` | `tiktoken` |
+| `gpt-4`, `gpt-4-turbo` | `cl100k_base` | `tiktoken` |
+| `gpt-35-turbo` | `cl100k_base` | `tiktoken` |
+
+After each API call, the response includes a `usage` object with actual counts from the server:
+
+```python
+response.usage.prompt_tokens       # tokens in the input messages
+response.usage.completion_tokens   # tokens in the generated response
+response.usage.total_tokens        # prompt_tokens + completion_tokens
+```
+
+**Cost formula:**
+
+```
+cost = (prompt_tokens / 1_000_000) * input_price_per_million
+     + (completion_tokens / 1_000_000) * output_price_per_million
+```
+
+Approximate Azure OpenAI pricing (Global Standard, subject to change):
+
+| Model | Input (per 1M tokens) | Output (per 1M tokens) |
+|-------|----------------------|------------------------|
+| `gpt-4o` | $2.50 | $10.00 |
+| `gpt-4o-mini` | $0.15 | $0.60 |
+| `gpt-35-turbo` | $1.50 | $2.00 |
+
+### Implementation
+
+You will create a helper function for token counting and enhance `chat_completion()` to return usage data.
+
+**Step 1: Create a `count_tokens()` helper in `openai_service.py`**
+
+Write a function that:
+
+- Takes a list of messages (same format as `chat_completion()`) and an optional model name
+- Uses `tiktoken.encoding_for_model()` to get the correct encoding for the model
+- Counts tokens for each message, accounting for the per-message overhead (each message costs 3 extra tokens for `<|start|>role\ncontent<|end|>\n`)
+- Adds 3 tokens for the assistant reply priming
+- Returns the total token count as an integer
 
 <checkpoint id="l5-tiktoken"></checkpoint>
+
+**Step 2: Enhance `chat_completion()` to return usage data**
+
+Modify `chat_completion()` (or create a new `chat_completion_with_usage()` variant) that:
+
+- Calls the API as before
+- Reads `response.usage` to get `prompt_tokens`, `completion_tokens`, and `total_tokens`
+- Calculates estimated cost using a pricing lookup for the model
+- Returns a dictionary containing `content`, `usage` (token counts), and `estimated_cost`
+
 <checkpoint id="l5-usage-response"></checkpoint>
+
+<details><summary>Hint — skeleton code</summary>
+
+**Token counting helper:**
+
+```python
+import tiktoken
+
+def count_tokens(messages: list[dict], model: str = "gpt-4o-mini") -> int:
+    try:
+        encoding = tiktoken.encoding_for_model(___)
+    except KeyError:
+        encoding = tiktoken.get_encoding("o200k_base")
+
+    tokens_per_message = 3  # every message has <|start|>role/name\n and content<|end|>\n
+
+    num_tokens = 0
+    for message in ___:
+        num_tokens += ___
+        for key, value in message.items():
+            num_tokens += len(encoding.encode(___))
+            if key == "name":
+                num_tokens += 1  # name field costs an extra token
+    num_tokens += 3  # priming for assistant reply
+    return ___
+```
+
+**Enhanced chat function:**
+
+```python
+PRICING = {
+    "gpt-4o":       {"input": 2.50, "output": 10.00},
+    "gpt-4o-mini":  {"input": 0.15, "output": 0.60},
+    "gpt-35-turbo": {"input": 1.50, "output": 2.00},
+}
+
+def chat_completion_with_usage(
+    messages: list[dict],
+    model: str | None = None,
+    # ... same params as chat_completion
+) -> dict:
+    client = _get_client()
+    deployment = model if model else settings.AZURE_OPENAI_DEPLOYMENT
+    response = client.chat.completions.create(
+        model=___,
+        messages=___,
+        # ... all params
+    )
+    content = response.choices[0].message.___ or ""
+    usage = response.___
+    prices = PRICING.get(deployment, PRICING["gpt-4o-mini"])
+    cost = (usage.___ / 1_000_000) * prices["input"] \
+         + (usage.___ / 1_000_000) * prices["output"]
+    return {
+        "content": ___,
+        "usage": {
+            "prompt_tokens": usage.___,
+            "completion_tokens": usage.___,
+            "total_tokens": usage.___,
+        },
+        "estimated_cost_usd": round(___, 6),
+    }
+```
+
+</details>
+
+### Test It
+
+> 1. Restart the backend server after making changes
+> 2. Test `count_tokens()` locally in a Python shell:
+>    ```python
+>    from app.services.openai_service import count_tokens
+>    msgs = [{"role": "user", "content": "Hello, how are you?"}]
+>    print(count_tokens(msgs))  # Should print a number like 12-15
+>    ```
+> 3. Call the enhanced endpoint and check that `usage` and `estimated_cost_usd` are in the response
+> 4. Compare your local `count_tokens()` result with the `prompt_tokens` from the API response — they should be close (within 1-3 tokens due to formatting overhead)
+>
+> **Import error for tiktoken?** Make sure to `pip install tiktoken` and add it to `requirements.txt`.
+> **usage is None?** Verify you are reading `response.usage`, not `response.choices[0].usage`. The usage object lives at the top level of the response.
+
 <checkpoint id="l5-test"></checkpoint>
+
+<details><summary>Full Solution</summary>
+
+**Add to `openai_service.py`:**
+
+```python
+import tiktoken
+
+
+PRICING_PER_MILLION = {
+    "gpt-4o":       {"input": 2.50, "output": 10.00},
+    "gpt-4o-mini":  {"input": 0.15, "output": 0.60},
+    "gpt-35-turbo": {"input": 1.50, "output": 2.00},
+}
+
+
+def count_tokens(messages: list[dict], model: str = "gpt-4o-mini") -> int:
+    """Count the number of tokens in a list of messages using tiktoken."""
+    try:
+        encoding = tiktoken.encoding_for_model(model)
+    except KeyError:
+        encoding = tiktoken.get_encoding("o200k_base")
+
+    tokens_per_message = 3
+    num_tokens = 0
+    for message in messages:
+        num_tokens += tokens_per_message
+        for key, value in message.items():
+            num_tokens += len(encoding.encode(value))
+            if key == "name":
+                num_tokens += 1  # name field costs an extra token
+    num_tokens += 3  # assistant reply priming
+    return num_tokens
+
+
+def chat_completion_with_usage(
+    messages: list[dict],
+    model: str | None = None,
+    temperature: float = 0.7,
+    top_p: float = 1.0,
+    max_tokens: int = 800,
+    frequency_penalty: float = 0.0,
+    presence_penalty: float = 0.0,
+) -> dict:
+    """Chat completion that returns content, token usage, and estimated cost."""
+    client = _get_client()
+    deployment = model if model else settings.AZURE_OPENAI_DEPLOYMENT
+    response = client.chat.completions.create(
+        model=deployment,
+        messages=messages,
+        temperature=temperature,
+        top_p=top_p,
+        max_tokens=max_tokens,
+        frequency_penalty=frequency_penalty,
+        presence_penalty=presence_penalty,
+    )
+    content = response.choices[0].message.content or ""
+    usage = response.usage
+
+    prices = PRICING_PER_MILLION.get(deployment, PRICING_PER_MILLION["gpt-4o-mini"])
+    cost = 0.0
+    if usage:
+        cost = (usage.prompt_tokens / 1_000_000) * prices["input"] \
+             + (usage.completion_tokens / 1_000_000) * prices["output"]
+
+    return {
+        "content": content,
+        "usage": {
+            "prompt_tokens": usage.prompt_tokens if usage else 0,
+            "completion_tokens": usage.completion_tokens if usage else 0,
+            "total_tokens": usage.total_tokens if usage else 0,
+        },
+        "estimated_cost_usd": round(cost, 6),
+    }
+```
+
+</details>
+
+> **Exam Tips**
+> - The exam expects you to understand that token counts affect both cost and rate limits. Azure OpenAI has per-minute token rate limits that are configured per deployment.
+> - Know that `max_tokens` limits the **completion** tokens only. The prompt tokens are determined by the input messages and are not capped by this parameter.
+> - The exam may ask how to estimate whether a prompt fits within a model's context window. The answer involves counting prompt tokens (using tiktoken or the API) and comparing against the model's maximum context length (e.g., 128k for GPT-4o).
+> - Azure OpenAI usage data is also available in the Azure Portal under **Metrics** for monitoring and cost management at scale. The exam tests awareness of monitoring tools.
+
+---
 
 <!-- section:layer:6 -->
 ## Layer 6: Entra ID Authentication & Governance
 
-> **Expert** — This section is a placeholder. Step definitions are tracked in the checklist. Full instructional content coming soon.
+- Review Entra ID (AAD) auth flow for Azure OpenAI
+- Understand RBAC roles: Cognitive Services User vs Contributor
+- Review managed identity patterns for production deployments
+- Answer self-check questions on authentication
 
-Deep-dive into production authentication patterns for Azure OpenAI: Entra ID (formerly Azure AD) token-based auth, RBAC roles, and managed identity configurations.
+> **What you will learn**
+> - How to replace API key authentication with Microsoft Entra ID (formerly Azure AD) token-based auth
+> - Which RBAC roles grant access to Azure OpenAI and what each role allows
+> - How managed identities eliminate the need for stored credentials in production
+> - When to use system-assigned vs. user-assigned managed identities
+>
+> *Exam objective: "Plan and manage an Azure AI solution" — configuring authentication, authorization, and identity management for Azure AI services.*
+
+### Concepts
+
+In Layers 1-5, you authenticated to Azure OpenAI using an **API key** (`settings.AZURE_OPENAI_KEY`). This is the simplest method but has significant limitations in production:
+
+- API keys are long-lived secrets that can be leaked
+- They cannot be scoped to specific users or applications
+- They provide full access — no fine-grained permissions
+- Rotating keys requires updating every application that uses them
+
+**Microsoft Entra ID** (formerly Azure Active Directory / Azure AD) is the recommended production authentication method. Instead of a static key, your application obtains a short-lived OAuth 2.0 token from Entra ID and passes it with each request.
 
 <checkpoint id="l6-entra-concept"></checkpoint>
+
+#### Authentication Flow: API Key vs. Entra ID
+
+| Aspect | API Key | Entra ID Token |
+|--------|---------|---------------|
+| Credential type | Static string (never expires unless rotated) | Short-lived token (typically 1 hour) |
+| Storage | Must be stored securely (Key Vault, env vars) | No secret to store when using managed identity |
+| Granularity | Full access — anyone with the key has the same permissions | RBAC-based — different users/apps get different roles |
+| Rotation | Manual — update all consumers when key changes | Automatic — tokens are refreshed transparently |
+| Audit trail | Limited — logs show the key was used, not who used it | Full — logs show which identity made each request |
+| Exam preference | Acceptable for development and testing | Recommended for production (exam expects this answer) |
+
+#### Entra ID with the OpenAI SDK
+
+The `AzureOpenAI` client accepts an `azure_ad_token_provider` parameter — a callable that returns a valid token. The `azure-identity` package provides `DefaultAzureCredential`, which automatically tries multiple authentication methods in order (environment variables, managed identity, Azure CLI, etc.).
+
+```python
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+from openai import AzureOpenAI
+
+# Create a token provider for the Azure OpenAI scope
+credential = DefaultAzureCredential()
+token_provider = get_bearer_token_provider(
+    credential,
+    "https://cognitiveservices.azure.com/.default"
+)
+
+# Create the client — no api_key needed
+client = AzureOpenAI(
+    azure_endpoint="https://your-resource.openai.azure.com/",
+    azure_ad_token_provider=token_provider,
+    api_version="2024-10-21",
+)
+
+# Use the client normally — token is fetched/refreshed automatically
+response = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[{"role": "user", "content": "Hello"}],
+)
+```
+
+Note the scope string `"https://cognitiveservices.azure.com/.default"` — this is the resource identifier for all Azure Cognitive Services (including Azure OpenAI). The exam may test this exact value.
+
+#### RBAC Roles for Azure OpenAI
+
+Access is controlled through Azure Role-Based Access Control (RBAC). You assign roles to identities (users, groups, service principals, managed identities) at a specific scope (resource, resource group, or subscription).
+
 <checkpoint id="l6-rbac-roles"></checkpoint>
+
+| Role | Can Call APIs | Can Manage Resource | Can Manage Deployments | Typical Use |
+|------|:------------:|:-------------------:|:---------------------:|------------|
+| **Cognitive Services OpenAI User** | Yes | No | No | Applications that only need to call the API (chat, completions, embeddings). Most common role for production apps. |
+| **Cognitive Services OpenAI Contributor** | Yes | No | Yes (create/delete deployments) | CI/CD pipelines that deploy models. Dev teams that manage their own deployments. |
+| **Cognitive Services User** | Yes (all Cognitive Services) | No | No | Applications that use multiple AI services (not just OpenAI). Broader than OpenAI User. |
+| **Cognitive Services Contributor** | Yes (all Cognitive Services) | Yes (create/delete resources) | Yes | Admins who manage AI service resources. Full control except role assignment. |
+
+> **Key distinction for the exam:** "OpenAI User" vs. "OpenAI Contributor" — the User role can call the API but cannot create or delete model deployments. The Contributor role can do both. Choose the least-privileged role that meets the requirement.
+
+#### Managed Identities
+
+A **managed identity** is an Entra ID identity that Azure creates and manages for your resource. It eliminates the need to store any credentials — Azure handles the entire token lifecycle.
+
 <checkpoint id="l6-managed-identity"></checkpoint>
+
+| Type | Created With | Lifecycle | Shared Across Resources | When to Use |
+|------|-------------|-----------|:-----------------------:|------------|
+| **System-assigned** | Enabled on the resource (e.g., App Service, VM) | Tied to the resource — deleted when the resource is deleted | No — one identity per resource | Single-purpose apps where each resource needs its own identity. Simplest to set up. |
+| **User-assigned** | Created as a standalone Azure resource | Independent — persists until explicitly deleted | Yes — can be assigned to multiple resources | Multiple resources that need the same permissions (e.g., several App Services accessing the same OpenAI resource). |
+
+**Setup pattern for an App Service calling Azure OpenAI:**
+
+1. Enable system-assigned managed identity on the App Service
+2. Go to the Azure OpenAI resource > **Access control (IAM)**
+3. Click **Add role assignment**
+4. Select **Cognitive Services OpenAI User**
+5. Assign it to the App Service's managed identity
+6. In your code, use `DefaultAzureCredential()` — it automatically detects the managed identity
+
+No API key, no Key Vault, no secret rotation. `DefaultAzureCredential` handles everything.
+
+#### How `DefaultAzureCredential` Selects an Identity
+
+`DefaultAzureCredential` tries authentication methods in a fixed order and uses the first one that succeeds:
+
+1. **Environment variables** (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_CLIENT_SECRET`)
+2. **Workload identity** (Kubernetes)
+3. **Managed identity** (App Service, VM, Container Apps)
+4. **Shared token cache** (Windows only)
+5. **Visual Studio Code**
+6. **Azure CLI** (`az login`)
+7. **Azure PowerShell**
+8. **Azure Developer CLI** (`azd auth login`)
+
+> *This is the default chain as of `azure-identity` 1.x. See [official docs](https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.defaultazurecredential) for the full list.*
+
+In production (App Service with managed identity), it picks up method 3 automatically. In local development, it falls through to method 4 (your `az login` session). This means the same code works in both environments without changes.
+
+### Self-Check Questions
+
+**Q1.** Your company requires that no API keys are stored in application configuration. You deploy an Azure OpenAI-backed application to Azure App Service. What is the recommended authentication approach?
+
+<details><summary>Answer</summary>
+
+Enable a **system-assigned managed identity** on the App Service, assign it the **Cognitive Services OpenAI User** RBAC role on the Azure OpenAI resource, and use `DefaultAzureCredential` in your code. This eliminates all stored secrets — the managed identity obtains tokens automatically from Entra ID.
+
+</details>
+
+**Q2.** A developer needs to create and delete model deployments in Azure OpenAI via a CI/CD pipeline, but should NOT be able to delete the Azure OpenAI resource itself. Which RBAC role should you assign?
+
+<details><summary>Answer</summary>
+
+**Cognitive Services OpenAI Contributor**. This role allows managing deployments (create, delete, update) and calling the API, but does not grant permission to delete or modify the Azure OpenAI resource itself. "Cognitive Services Contributor" would be too broad — it allows managing the resource.
+
+</details>
+
+**Q3.** What is the token scope (resource URI) used when requesting an Entra ID token for Azure OpenAI?
+
+<details><summary>Answer</summary>
+
+`https://cognitiveservices.azure.com/.default` — This is the scope for all Azure Cognitive Services, including Azure OpenAI. It is passed to `get_bearer_token_provider()` or used directly in token acquisition calls.
+
+</details>
+
+**Q4.** You have three App Services that all need to call the same Azure OpenAI resource with identical permissions. Should you use system-assigned or user-assigned managed identities?
+
+<details><summary>Answer</summary>
+
+**User-assigned managed identity**. Create a single user-assigned identity, assign it the Cognitive Services OpenAI User role on the OpenAI resource, and attach the same identity to all three App Services. This is cleaner than creating three separate system-assigned identities with three separate role assignments. User-assigned identities are preferred when multiple resources share the same access requirements.
+
+</details>
+
 <checkpoint id="l6-questions"></checkpoint>
+
+> **Exam Tips**
+> - The exam strongly favors Entra ID over API keys for production scenarios. If a question asks about "the most secure" or "recommended" authentication method, the answer is almost always Entra ID with managed identity.
+> - Know the four Cognitive Services RBAC roles and what each allows. The exam frequently asks you to choose the **least privileged** role for a given scenario.
+> - `DefaultAzureCredential` is the recommended credential class because it works in both local development (Azure CLI) and production (managed identity) without code changes. The exam tests this.
+> - System-assigned managed identities are tied to the resource lifecycle (deleted when the resource is deleted). User-assigned managed identities are independent resources. The exam may ask which to choose based on requirements.
+> - The token scope `https://cognitiveservices.azure.com/.default` applies to all Cognitive Services, not just OpenAI. This is a common exam question.
+
+---
 
 <!-- section:exam-tips -->
 ## Exam Quiz

@@ -824,36 +824,557 @@ def search_documents(query: str) -> list[dict]:
 <!-- section:layer:5 -->
 ## Layer 5: Knowledge Store Projections
 
-> **Advanced** — This section is a placeholder. Step definitions are tracked in the checklist. Full instructional content coming soon.
+- Deep-dive into knowledge store projection types
+- Understand the Shaper skill for reshaping enrichment output
+- Review projection groups and cross-referencing with `generatedKeyName`
+- Answer self-check questions
 
-Explore knowledge store projections — table, object, and file projections — and the Shaper skill for projection shaping. Review how enriched data is output to Azure Storage.
+### What You Will Learn
+
+- The three projection types (table, object, file) and when to use each
+- How to define a `knowledgeStore` property in a skillset definition
+- How the Shaper skill reshapes enrichment tree output for projections
+- How projection groups share a common generated key for cross-referencing
+
+> **Exam objective:** Plan and manage an Azure AI solution > Implement knowledge mining solutions > Define projections for a knowledge store
+
+### Concepts
+
+In Layer 3 you learned that a knowledge store is an optional output from a skillset that projects enriched data into Azure Storage. This layer goes deeper into projection types, the JSON schema, and the Shaper skill that connects them.
+
+**Three projection types:**
+
+| Projection Type | Target Storage | Format | Best For |
+|-----------------|---------------|--------|----------|
+| **Table projections** | Azure Table Storage | Rows and columns | Power BI dashboards, structured analytics, cross-referencing entities |
+| **Object projections** | Azure Blob Storage | JSON files | Custom downstream processing, data science pipelines, archiving enriched documents |
+| **File projections** | Azure Blob Storage | Binary files | Normalized images extracted during document cracking (e.g., images pulled from PDFs) |
+
+Each projection type serves a different analytics need. You can use all three in the same skillset definition — they are not mutually exclusive.
 
 <checkpoint id="l5-projection-types"></checkpoint>
+
+**Knowledge store definition in a skillset:**
+
+The `knowledgeStore` property is defined at the top level of a skillset, alongside the `skills` array. Here is a complete example showing all three projection types:
+
+```json
+{
+  "name": "my-skillset",
+  "skills": [ "... (skills omitted for brevity)" ],
+  "knowledgeStore": {
+    "storageConnectionString": "DefaultEndpointsProtocol=https;AccountName=mystorageacct;...",
+    "projections": [
+      {
+        "tables": [
+          {
+            "tableName": "EntitiesTable",
+            "generatedKeyName": "EntityKey",
+            "source": "/document/shapedEntities"
+          },
+          {
+            "tableName": "KeyPhrasesTable",
+            "generatedKeyName": "PhraseKey",
+            "source": "/document/shapedPhrases"
+          }
+        ],
+        "objects": [
+          {
+            "storageContainer": "enriched-docs",
+            "generatedKeyName": "ObjectKey",
+            "source": "/document/shapedOutput"
+          }
+        ],
+        "files": [
+          {
+            "storageContainer": "normalized-images",
+            "generatedKeyName": "FileKey",
+            "source": "/document/normalized_images/*"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Key properties:**
+
+- `storageConnectionString` — connection string to the Azure Storage account that receives the projections.
+- `projections` — an array of **projection groups**. Each group is an object with optional `tables`, `objects`, and `files` arrays.
+- `source` — a path in the enrichment tree pointing to the data to project. This is typically the output of a Shaper skill.
+
+**The Shaper skill (`#Microsoft.Skills.Util.ShaperSkill`):**
+
+The enrichment tree produced by skills is a nested structure. Projections often need a different shape — for example, a flat row for a table projection. The Shaper skill reshapes enrichment tree nodes into the structure that projections expect.
+
+```json
+{
+  "@odata.type": "#Microsoft.Skills.Util.ShaperSkill",
+  "name": "shape-entities",
+  "context": "/document",
+  "inputs": [
+    { "name": "docId", "source": "/document/id" },
+    { "name": "docTitle", "source": "/document/title" },
+    {
+      "name": "entities",
+      "sourceContext": "/document/content/persons/*",
+      "inputs": [
+        { "name": "personName", "source": "/document/content/persons/*" }
+      ]
+    }
+  ],
+  "outputs": [
+    { "name": "output", "targetName": "shapedEntities" }
+  ]
+}
+```
+
+> **Note:** Paths shown (e.g., `/document/content/persons/*`) are illustrative. Adjust paths based on your specific skill configuration and context settings. The actual enrichment tree paths depend on which skills precede the Shaper and what `context` and `targetName` values they use.
+
+Key Shaper skill concepts:
+
+- **`inputs`** — defines the shape of the output object. Each input becomes a property in the output.
+- **`sourceContext`** — used for nested inputs when you need to iterate over a collection (e.g., all persons extracted from a document). The nested `inputs` are evaluated relative to the `sourceContext` path.
+- **`outputs`** — the reshaped data is written to the enrichment tree at the specified `targetName`. Projections reference this output via the `source` property.
+
 <checkpoint id="l5-shaper-skill"></checkpoint>
+
+**Projection groups and `generatedKeyName`:**
+
+All projections within the same group (the same object in the `projections` array) share a common `generatedKeyName`. This auto-generated key lets you cross-reference rows across tables within the same group — for example, linking an entity row in `EntitiesTable` back to its parent document row in a `DocumentsTable`.
+
+| Concept | Description |
+|---------|-------------|
+| **Projection group** | One entry in the `projections` array containing `tables`, `objects`, and/or `files` |
+| **`generatedKeyName`** | Auto-generated unique key added to each projected row/object; shared across the group |
+| **Cross-referencing** | Use the generated key to join tables in Power BI or link objects to their source table rows |
+| **Multiple groups** | Separate groups produce separate key spaces — they cannot cross-reference each other |
+
+When you need related projections that reference each other (e.g., a documents table and a key-phrases-per-document table), put them in the **same** projection group. When you need independent projections, use **separate** groups.
+
 <checkpoint id="l5-storage-output"></checkpoint>
+
+### Test It
+
+Answer these self-check questions:
+
+1. You need to export extracted entities to Power BI for cross-tabulation with document metadata. Which projection type do you use, and why?
+2. Your skillset extracts key phrases as a nested array per document. Projections require a flat structure. Which skill do you use to reshape the data?
+3. You have two table projections — `DocumentsTable` and `EntitiesTable`. You need to join them in Power BI. How do you ensure they share a common key?
+
+<details>
+<summary>Answers</summary>
+
+1. **Table projections** — Power BI connects directly to Azure Table Storage. Table projections produce structured rows that Power BI can query and cross-tabulate. Object projections produce JSON blobs, which are harder for Power BI to consume.
+2. **Shaper skill** (`#Microsoft.Skills.Util.ShaperSkill`). It reshapes the nested enrichment tree output into the flat structure that table projections require. Use `sourceContext` for iterating over the nested array.
+3. Place both table projections in the **same projection group** (the same object in the `projections` array). They will share a common `generatedKeyName` that acts as a foreign key for joining in Power BI.
+
+</details>
+
+### Exam Tips
+
+- **Know all three projection types and their target storage.** The exam may describe a scenario (e.g., "export to Power BI") and ask which projection type to use. Tables = Power BI, Objects = custom JSON processing, Files = binary images.
+- **The Shaper skill is required when projection shape differs from enrichment tree shape.** If the exam shows a projection that fails, check whether a Shaper skill is missing.
+- **`sourceContext` is for nested/collection inputs in the Shaper skill.** Without it, you cannot iterate over arrays in the enrichment tree.
+- **Projection groups determine cross-referencing scope.** The exam may ask how to join two tables — the answer is always "same projection group."
+- **Knowledge store requires a storage connection string** on the skillset. If projections are not appearing, verify the connection string is correct and the storage account is accessible.
+
+---
 
 <!-- section:layer:6 -->
 ## Layer 6: Custom Skills & Azure Functions
 
-> **Advanced** — This section is a placeholder. Step definitions are tracked in the checklist. Full instructional content coming soon.
+- Understand the full WebApiSkill request/response JSON contract
+- Review an Azure Function implementation for a custom skill
+- Distinguish `fieldMappings` from `outputFieldMappings` on the indexer
+- Understand error handling in custom skills
+- Answer self-check questions
 
-Design custom skills using the WebApiSkill contract. Understand how to implement an Azure Function as a custom skill and integrate it into an AI enrichment pipeline.
+### What You Will Learn
+
+- The exact JSON schema that a WebApiSkill endpoint must accept and return
+- How to implement an Azure Function (Python) that serves as a custom skill
+- The difference between `fieldMappings` and `outputFieldMappings` on the indexer
+- How partial failures and error reporting work in the custom skill contract
+
+> **Exam objective:** Implement knowledge mining solutions > Implement a custom skill for Azure AI Search
+
+### Concepts
+
+Layer 3 introduced the `WebApiSkill` as the mechanism for calling your own code during enrichment. This layer covers the full implementation: the request/response contract, an Azure Function example, and how to wire the skill output into your search index.
+
+**WebApiSkill request/response contract:**
+
+The indexer sends a POST request to your skill endpoint. The request body and expected response body must follow a strict schema. The exam frequently tests whether you can identify errors in this schema.
+
+**Request body (sent by the indexer to your endpoint):**
+
+```json
+{
+  "values": [
+    {
+      "recordId": "1",
+      "data": {
+        "text": "Azure AI services provide cloud-based AI capabilities.",
+        "languageCode": "en"
+      }
+    },
+    {
+      "recordId": "2",
+      "data": {
+        "text": "Les services Azure AI offrent des capacites cloud.",
+        "languageCode": "fr"
+      }
+    }
+  ]
+}
+```
+
+**Expected response body (returned by your endpoint):**
+
+```json
+{
+  "values": [
+    {
+      "recordId": "1",
+      "data": {
+        "category": "technology",
+        "confidence": 0.95
+      },
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "recordId": "2",
+      "data": {
+        "category": "technology",
+        "confidence": 0.87
+      },
+      "errors": [],
+      "warnings": []
+    }
+  ]
+}
+```
+
+**Contract rules:**
+
+| Rule | Detail |
+|------|--------|
+| `values` array | Both request and response must have a top-level `values` array |
+| `recordId` | Each record has a unique `recordId`. The response `recordId` must match the request `recordId`. |
+| `data` object | Request `data` contains the inputs defined in the skill. Response `data` contains the outputs. |
+| `errors` array | Per-record errors. If non-empty, that record's enrichment fails but other records continue. |
+| `warnings` array | Per-record warnings. Logged but do not cause failure. |
+| HTTP status | Must return `200 OK` even if individual records have errors (errors are per-record, not per-request). |
 
 <checkpoint id="l6-webapi-schema"></checkpoint>
+
+**Azure Function implementation (Python, illustrative):**
+
+This example shows a Python Azure Function that classifies text into categories. It demonstrates the required request/response contract:
+
+```python
+import azure.functions as func
+import json
+import logging
+
+app = func.FunctionApp()
+
+@app.route(route="classify", auth_level=func.AuthLevel.FUNCTION)
+def classify_text(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info("Custom skill: classify_text invoked")
+
+    try:
+        body = req.get_json()
+    except ValueError:
+        return func.HttpResponse(
+            json.dumps({"values": []}),
+            status_code=200,
+            mimetype="application/json",
+        )
+
+    results = []
+    for record in body.get("values", []):
+        record_id = record["recordId"]
+        text = record["data"].get("text", "")
+
+        try:
+            # --- Your custom logic here ---
+            category = "technology" if "azure" in text.lower() else "general"
+            confidence = 0.9
+            # --- End custom logic ---
+
+            results.append({
+                "recordId": record_id,
+                "data": {
+                    "category": category,
+                    "confidence": confidence,
+                },
+                "errors": [],
+                "warnings": [],
+            })
+        except Exception as e:
+            results.append({
+                "recordId": record_id,
+                "data": {},
+                "errors": [{"message": f"Error processing record: {str(e)}"}],
+                "warnings": [],
+            })
+
+    return func.HttpResponse(
+        json.dumps({"values": results}),
+        status_code=200,
+        mimetype="application/json",
+    )
+```
+
+Key implementation points:
+
+- Always return HTTP `200` — even when individual records fail. Per-record errors go in the `errors` array.
+- Always echo back the same `recordId` from the request.
+- The `data` object in the response must contain the fields declared in the skill's `outputs` array.
+- Use `auth_level=func.AuthLevel.FUNCTION` so the indexer can authenticate via a function key in the URL.
+
 <checkpoint id="l6-function-impl"></checkpoint>
+
+**`fieldMappings` vs `outputFieldMappings` on the indexer:**
+
+These two properties are both defined on the **indexer** (not on the skillset), but they serve different purposes. The exam tests this distinction frequently.
+
+| Property | Defined On | Purpose | When It Runs |
+|----------|-----------|---------|-------------|
+| `fieldMappings` | Indexer | Maps **source data fields** to **index fields** | Before the skillset runs |
+| `outputFieldMappings` | Indexer | Maps **skillset enrichment outputs** to **index fields** | After the skillset runs |
+
+```json
+{
+  "name": "my-indexer",
+  "dataSourceName": "my-blob-source",
+  "targetIndexName": "my-index",
+  "skillsetName": "my-skillset",
+  "fieldMappings": [
+    {
+      "sourceFieldName": "metadata_storage_path",
+      "targetFieldName": "id",
+      "mappingFunction": { "name": "base64Encode" }
+    },
+    {
+      "sourceFieldName": "metadata_storage_name",
+      "targetFieldName": "title"
+    }
+  ],
+  "outputFieldMappings": [
+    {
+      "sourceFieldName": "/document/content/persons",
+      "targetFieldName": "people"
+    },
+    {
+      "sourceFieldName": "/document/content/keyphrases",
+      "targetFieldName": "keyPhrases"
+    }
+  ]
+}
+```
+
+> **Note:** The enrichment tree paths in `outputFieldMappings` (e.g., `/document/content/persons`) are illustrative. Actual paths depend on your skill configuration, particularly the `context` and `targetName` values set on each skill. Use a debug session to inspect your enrichment tree and verify the correct paths.
+
+- `fieldMappings` sources are actual fields from the data source (blob metadata, SQL columns, etc.).
+- `outputFieldMappings` sources are paths in the enrichment tree created by skills (e.g., `/document/content/persons`).
+
+**Error handling in custom skills:**
+
+| Scenario | Behavior |
+|----------|----------|
+| `errors` array is non-empty for a record | That record's enrichment output is discarded. The document may still be indexed without the enriched field. Other records in the batch are unaffected. |
+| `warnings` array is non-empty for a record | The warning is logged in the indexer execution history. The record is processed normally. |
+| HTTP status 5xx from the endpoint | The entire batch fails. The indexer retries according to its retry policy. |
+| `recordId` mismatch (response ID differs from request ID) | The indexer cannot match the response to the correct document. The record fails. |
+| Missing `data` object in response | The record fails — the indexer expects a `data` object for each record. |
+
 <checkpoint id="l6-skill-integration"></checkpoint>
+
+### Test It
+
+Answer these self-check questions:
+
+1. The indexer sends a batch to your custom skill endpoint. One record causes an exception in your code. Should you return HTTP 500?
+2. Your custom skill outputs a field called `sentiment`, but it does not appear in the search index after indexing. What is the most likely cause?
+3. A WebApiSkill response contains `"recordId": "3"` but the request had `"recordId": "2"`. What happens?
+
+<details>
+<summary>Answers</summary>
+
+1. **No.** Return HTTP `200` and include the error in that record's `errors` array. HTTP 5xx causes the entire batch to fail and triggers retries. Per-record errors allow other records in the batch to succeed.
+2. **Missing `outputFieldMapping`.** The skill writes `sentiment` to the enrichment tree, but without an `outputFieldMapping` on the indexer, the enriched value is not mapped to an index field. Add `{ "sourceFieldName": "/document/sentiment", "targetFieldName": "sentiment" }` to `outputFieldMappings`.
+3. **The record fails.** The indexer cannot match the response record to the request document because the `recordId` values do not match. Always echo back the exact `recordId` from the request.
+
+</details>
+
+### Exam Tips
+
+- **The WebApiSkill contract is heavily tested.** Memorize the structure: `values` array, `recordId`, `data`, `errors`, `warnings`. The exam may show a response with a missing field and ask what is wrong.
+- **Always return HTTP 200 from a custom skill**, even for errors. Per-record errors go in the `errors` array. Returning 4xx/5xx fails the entire batch.
+- **`fieldMappings` = before skillset, `outputFieldMappings` = after skillset.** If an enriched field is missing from the index, the first thing to check is `outputFieldMappings`.
+- **Custom skill endpoints must be HTTPS** in production. The indexer will not call HTTP endpoints unless you are using a private endpoint or debug configuration.
+- **Function keys in the URL** are the typical authentication mechanism. The skill definition's `uri` includes the function key as a query parameter: `https://myapp.azurewebsites.net/api/classify?code=<function-key>`.
+
+---
 
 <!-- section:layer:7 -->
 ## Layer 7: Incremental Enrichment & Debugging
 
-> **Expert** — This section is a placeholder. Step definitions are tracked in the checklist. Full instructional content coming soon.
+- Understand incremental enrichment and the indexer cache
+- Learn to use debug sessions in the Azure portal
+- Review common field mapping pitfalls and their fixes
+- Distinguish reset indexer from reset skills
+- Answer self-check questions
 
-Deep-dive into incremental enrichment, caching strategies, debug sessions for skillset troubleshooting, and output field mapping pitfalls.
+### What You Will Learn
+
+- How incremental enrichment (enrichment caching) reduces cost and processing time
+- How to configure the `cache` property on an indexer
+- How to use debug sessions to step through enrichment pipelines
+- Common field mapping mistakes and how to diagnose them
+- When to reset an indexer vs. reset skills
+
+> **Exam objective:** Implement knowledge mining solutions > Manage indexer execution and debug enrichment pipelines
+
+### Concepts
+
+Layers 1-6 covered building the pipeline: indexes, indexers, skillsets, projections, and custom skills. This layer focuses on operating the pipeline in production — caching, debugging, and troubleshooting.
+
+**Incremental enrichment (enrichment caching):**
+
+By default, every time an indexer runs, it re-executes all skills for every document. This is expensive when you have thousands of documents and multiple cognitive skills. Incremental enrichment caches skill outputs so that only changed documents or changed skill definitions trigger re-processing.
+
+How it works:
+
+1. On first run, the indexer executes all skills and stores each skill's output in a cache (an Azure Storage account you provide).
+2. On subsequent runs, the indexer checks whether each document has changed (via change detection) and whether the skill definition has changed.
+3. If neither has changed, the cached output is used instead of re-executing the skill.
+4. If the document changed, all skills re-run for that document. If a skill definition changed, that skill (and downstream skills) re-run for all documents.
+
+**JSON configuration for the indexer `cache` property:**
+
+```json
+{
+  "name": "my-indexer",
+  "dataSourceName": "my-blob-source",
+  "targetIndexName": "my-index",
+  "skillsetName": "my-skillset",
+  "cache": {
+    "storageConnectionString": "DefaultEndpointsProtocol=https;AccountName=mycacheacct;...",
+    "enableReprocessing": true
+  },
+  "parameters": {
+    "configuration": {
+      "dataToExtract": "contentAndMetadata",
+      "imageAction": "generateNormalizedImages"
+    }
+  }
+}
+```
+
+| Property | Description |
+|----------|-------------|
+| `cache.storageConnectionString` | Connection string to the Azure Storage account used for caching. **Required** — incremental enrichment does not work without it. |
+| `cache.enableReprocessing` | When `true` (default), the indexer uses the cache. Set to `false` to temporarily disable caching without removing the configuration. |
+
+> **Note:** Enrichment caching is currently a **preview feature** and requires a preview API version (e.g., `2025-11-01-preview`). Preview features may change before general availability.
 
 <checkpoint id="l7-incremental"></checkpoint>
+
+**Debug sessions in the Azure portal:**
+
+When a skillset produces unexpected results — missing fields, wrong values, or errors — debug sessions let you step through the enrichment pipeline document by document.
+
+**How to start a debug session:**
+
+1. In the Azure portal, navigate to your Search resource.
+2. Click **Debug sessions** in the left menu.
+3. Click **Add debug session**.
+4. Select the indexer whose skillset you want to debug.
+5. Provide a storage connection string (for temporary session data).
+6. Optionally specify a single document URI to debug (otherwise it picks the first document).
+7. Click **Run** to execute the pipeline in debug mode.
+
+**What you can inspect during a debug session:**
+
+| Inspection Point | What It Shows |
+|-----------------|---------------|
+| **Skill inputs** | The exact data passed into each skill — verify the `source` paths are correct |
+| **Skill outputs** | The data produced by each skill — verify values are as expected |
+| **Enrichment tree** | The full document enrichment tree at each step — see how data accumulates |
+| **Errors and warnings** | Per-skill errors that may be hidden in normal indexer status |
+| **Field mappings** | How source fields and enrichment outputs map to index fields |
+
+Debug sessions are read-only — they do not modify your index or cached data. You can safely re-run them as many times as needed.
+
 <checkpoint id="l7-debug-sessions"></checkpoint>
+
+**Common field mapping pitfalls:**
+
+| Problem | Cause | Fix |
+|---------|-------|-----|
+| Enriched field not appearing in index | Missing `outputFieldMapping` on the indexer | Add an `outputFieldMapping` that maps the enrichment tree path (e.g., `/document/persons`) to the target index field |
+| Source field not appearing in index | Missing `fieldMapping` on the indexer | Add a `fieldMapping` from the source field name to the target index field, or ensure the names match exactly |
+| Field appears but is always empty | Wrong `source` path in the skill input | Use a debug session to verify the enrichment tree paths; fix the `source` to point to the correct node |
+| Skill output is an array but index field is a string | Type mismatch between skill output and index field | Change the index field type to `Collection(Edm.String)`, or add a skill that flattens the array |
+| `base64Encode` not applied to document key | Missing `mappingFunction` in field mapping | Add `"mappingFunction": { "name": "base64Encode" }` to the field mapping for the key field |
+| Enriched field works for some documents but not others | Skill `context` is wrong — runs at `/document` but data is at `/document/pages/*` | Change the skill `context` to match the granularity of the data |
+
 <checkpoint id="l7-field-mappings"></checkpoint>
+
+**Reset indexer vs. reset skills:**
+
+When troubleshooting or recovering from errors, you have two reset options. They are related but serve different purposes:
+
+| Action | What It Does | When to Use |
+|--------|-------------|-------------|
+| **Reset indexer** | Clears the indexer's high-water mark (change tracking state), forcing a full re-crawl from the data source. All documents are re-fetched and re-indexed. **For indexers with a skillset and enrichment caching enabled, resetting the indexer also implicitly resets the skillset** (clears the enrichment cache). | After data source schema changes, after deleting and recreating the index, when change detection is not picking up modified documents, or when you need a clean re-crawl and full re-enrichment. |
+| **Reset skills** | Clears the enrichment cache, forcing all skills to re-execute for all documents on the next indexer run. Does **not** reset the indexer's change tracking — only documents that pass change detection are re-enriched. | After changing a skill definition when you want to force re-enrichment without re-crawling the data source, or when cached results appear stale or incorrect. |
+
+**Important:** These are **not** independent operations. Reset Indexer is the broader operation — it encompasses Reset Skills (when a skillset and cache are configured). Reset Skills is the narrower operation — it only affects the enrichment cache without triggering a full re-crawl. Use Reset Skills when you only need to re-run enrichment; use Reset Indexer when you need both a full re-crawl and re-enrichment.
+
+**How to reset in the portal:**
+
+1. Navigate to your Search resource > **Indexers** > select the indexer.
+2. Click **Reset** (for full indexer reset) or **Reset Skills** (for cache-only reset).
+3. Run the indexer again to apply the reset.
+
+### Test It
+
+Answer these self-check questions:
+
+1. You modify an Entity Recognition skill to also extract locations (in addition to persons). You want the new output to appear for all existing documents. Which reset do you perform?
+2. You notice that a recently modified blob was not re-indexed on the last indexer run. You suspect the change detection missed it. What do you do?
+3. Your skillset extracts key phrases, but the `keyPhrases` field in the index is always empty. The skill definition looks correct. Where do you look next?
+4. You are developing a new skillset and want to verify that each skill receives the correct input. What Azure portal feature do you use?
+
+<details>
+<summary>Answers</summary>
+
+1. **No manual reset is needed.** When you modify a skill definition (e.g., adding entity categories), the incremental enrichment system automatically detects the change and re-runs the modified skill and its downstream dependencies on the next indexer run. You only need to manually Reset Skills when the indexer *cannot* detect a change — such as when you modify the code behind a custom skill's endpoint URL without changing the skill definition itself.
+2. **Reset the indexer.** This clears change tracking and forces a full re-crawl from the data source. On the next run, all documents (including the modified blob) will be re-fetched and re-indexed.
+3. **Check `outputFieldMappings` on the indexer.** The skill may be producing key phrases correctly in the enrichment tree, but without an `outputFieldMapping` from `/document/content/keyphrases` to the `keyPhrases` index field, the data is not written to the index. Use a debug session to verify the skill output exists in the enrichment tree.
+4. **Debug sessions.** Create a debug session for your indexer, run it against a sample document, and inspect the inputs and outputs at each skill step. This shows you exactly what data each skill receives and produces.
+
+</details>
+
 <checkpoint id="l7-questions"></checkpoint>
+
+### Exam Tips
+
+- **Incremental enrichment requires a storage connection string on the indexer's `cache` property.** Without it, caching is not enabled. The exam may present a scenario where "all documents are re-processed every run" and ask how to fix it.
+- **Reset Indexer is the broader reset; Reset Skills is the narrower one.** Reset Indexer forces a full re-crawl AND (when a skillset with caching is configured) implicitly resets skills. Reset Skills only clears the enrichment cache without triggering a re-crawl. The exam may describe a scenario and ask which reset to perform. Remember: reset indexer = re-crawl + re-enrich, reset skills = re-enrich only.
+- **Debug sessions are the primary tool for skillset troubleshooting.** If the exam asks how to diagnose why an enriched field is missing or incorrect, the answer is almost always "use a debug session."
+- **`outputFieldMappings` is the most common cause of missing enriched fields.** If a skill produces output but it does not appear in the index, the mapping is missing or has the wrong source path.
+- **Enrichment cache invalidation is automatic** when you change a skill definition (parameters, inputs, outputs). You do not need to manually reset skills after editing a skillset. However, **external changes** (e.g., modifying the code behind a custom skill's endpoint URL without changing the skill definition) are *not* detected — use Reset Skills for those cases.
+- **Debug sessions require a storage account** for temporary data. This is separate from the enrichment cache storage account (though you can use the same one).
+
+---
 
 <!-- section:exam-tips -->
 ## Exam Quiz

@@ -980,36 +980,514 @@ def text_to_speech(text: str) -> str:
 <!-- section:layer:5 -->
 ## Layer 5: Custom NER & Conversational Language Understanding
 
-> **Advanced** — This section is a placeholder. Step definitions are tracked in the checklist. Full instructional content coming soon.
+- Understand the Custom NER project lifecycle (create, label, train, evaluate, deploy, consume)
+- Learn CLU intents, entities, and utterances
+- Know entity types: learned, list, and prebuilt
+- Understand CLU deployment slots and SDK consumption
 
-Review custom Named Entity Recognition (NER) project lifecycle and Conversational Language Understanding (CLU) intents, entities, utterances, and deployment patterns.
+### What You Will Learn
+
+- How Custom NER extends the built-in `recognize_entities()` with your own entity categories
+- How CLU replaces LUIS for building conversational language models
+- The three core CLU concepts: intents, entities, and utterances
+- How to consume a deployed CLU model via the SDK
+
+This maps to exam objectives **D5: Build a custom text classification or custom NER solution** and **D5: Create a Conversational Language Understanding (CLU) application**.
+
+### Concepts
+
+#### Custom Named Entity Recognition (NER)
+
+Core Layer 2 introduced built-in entity recognition with `recognize_entities()`, which detects standard categories like Person, Location, and Organization. Custom NER lets you define your own entity categories tailored to your domain — for example, "ProductName", "PartNumber", or "PolicyClause".
+
+The Custom NER lifecycle follows six stages:
+
+| Stage | What Happens | Where |
+|-------|-------------|-------|
+| 1. Create project | Define entity types and configure the project | Language Studio (language.cognitive.azure.com) |
+| 2. Label data | Upload documents and tag entity spans with your custom categories | Language Studio |
+| 3. Train | Split data into training/test sets, train the model | Language Studio |
+| 4. Evaluate | Review precision, recall, and F1 score per entity type | Language Studio |
+| 5. Deploy | Assign the trained model to a named deployment slot | Language Studio |
+| 6. Consume | Call the deployed model via SDK or REST API | Your application code |
+
+**Evaluation metrics** — The exam expects you to understand these:
+
+- **Precision** — Of all entities the model predicted, what fraction were correct? High precision means few false positives.
+- **Recall** — Of all entities that actually exist in the data, what fraction did the model find? High recall means few false negatives.
+- **F1 score** — The harmonic mean of precision and recall. A single metric that balances both.
+
+To consume a deployed Custom NER model, use `TextAnalyticsClient.begin_recognize_custom_entities()`:
+
+```python
+from azure.ai.textanalytics import TextAnalyticsClient
+from azure.core.credentials import AzureKeyCredential
+
+client = TextAnalyticsClient(
+    endpoint="https://<resource>.cognitiveservices.azure.com",
+    credential=AzureKeyCredential("<key>"),
+)
+
+# begin_recognize_custom_entities returns a poller (long-running operation)
+poller = client.begin_recognize_custom_entities(
+    documents=["Order 5 units of Widget-X100, part number WX-100-A."],
+    project_name="my-custom-ner-project",
+    deployment_name="production",
+)
+result = poller.result()
+for doc in result:
+    for entity in doc.entities:
+        print(f"{entity.text} -> {entity.category} ({entity.confidence_score:.2f})")
+```
+
+Note that `begin_recognize_custom_entities()` is a **long-running operation** (LRO) — it returns a poller, not an immediate result. This is different from the built-in `recognize_entities()` which returns synchronously.
 
 <checkpoint id="l5-custom-ner"></checkpoint>
+
+#### Conversational Language Understanding (CLU)
+
+CLU is the replacement for **LUIS (Language Understanding Intelligent Service)**. The exam may reference both names — LUIS for legacy context and CLU for the current approach. Both share the same core concepts.
+
+CLU models are built around three key concepts:
+
+| Concept | Definition | Example |
+|---------|-----------|---------|
+| **Intent** | What the user wants to do | `BookFlight`, `CheckWeather`, `None` |
+| **Entity** | Relevant data extracted from the utterance | `destination: "Paris"`, `date: "next Friday"` |
+| **Utterance** | An example user input used for training | "Book me a flight to Paris next Friday" |
+
+Every CLU project has a built-in `None` intent that captures utterances that do not match any defined intent. Always add diverse `None` examples to improve model accuracy.
+
+**Entity types in CLU:**
+
+| Entity Type | How It Works | Example |
+|------------|-------------|---------|
+| **Learned** | Extracted from context based on training examples | Labeling "Paris" as `destination` in training utterances |
+| **List** | Exact match against a predefined list of values (with synonyms) | `size: ["small", "S", "sm"]` |
+| **Prebuilt** | Automatically recognized common types (no training needed) | `datetime`, `number`, `email`, `temperature` |
+
+**Deployment slots:** CLU models are deployed to named slots. The two standard slots are **production** and **staging**. You can swap models between slots without changing client code — useful for A/B testing or safe rollouts.
+
 <checkpoint id="l5-clu-intents"></checkpoint>
+
+#### Consuming a CLU Model via SDK
+
+Use the `ConversationAnalysisClient` from the `azure.ai.language.conversations` package:
+
+```python
+from azure.ai.language.conversations import ConversationAnalysisClient
+from azure.core.credentials import AzureKeyCredential
+
+client = ConversationAnalysisClient(
+    endpoint="https://<resource>.cognitiveservices.azure.com",
+    credential=AzureKeyCredential("<key>"),
+)
+
+result = client.analyze_conversation(
+    task={
+        "kind": "Conversation",
+        "analysisInput": {
+            "conversationItem": {
+                "id": "1",
+                "participantId": "user1",
+                "text": "Book a flight to Paris next Friday",
+            }
+        },
+        "parameters": {
+            "projectName": "my-clu-project",
+            "deploymentName": "production",
+        },
+    }
+)
+
+prediction = result["result"]["prediction"]
+top_intent = prediction["topIntent"]           # e.g., "BookFlight"
+confidence = prediction["intents"][0]["confidenceScore"]  # e.g., 0.95
+entities = prediction["entities"]              # list of extracted entities
+# Note: prediction["intents"] is a list of dicts, each with "category" (the intent
+# name) and "confidenceScore" (float 0-1). They are sorted by confidence descending,
+# so [0] is the top intent. Example: [{"category": "BookFlight", "confidenceScore": 0.95}, ...]
+```
+
+The response structure nests the prediction under `result.prediction`. The `topIntent` field gives the highest-confidence intent, and `entities` contains all recognized entities with their category, text, and confidence score.
+
 <checkpoint id="l5-clu-deploy"></checkpoint>
+
+### Self-Check Questions
+
+**Q1.** Your Custom NER model has high precision but low recall for the "PartNumber" entity type. What does this mean, and how would you fix it?
+
+<details><summary>Answer</summary>
+
+High precision, low recall means the model is conservative — when it does predict "PartNumber", it is usually correct (few false positives), but it misses many actual part numbers (many false negatives). To fix this, add more labeled training examples of part numbers, especially diverse formats and contexts the model currently misses.
+
+</details>
+
+**Q2.** A CLU project has a "CheckWeather" intent with entities for city and date. A user says "What's the weather?" without specifying a city or date. What will the CLU model return?
+
+<details><summary>Answer</summary>
+
+The model will still predict the `CheckWeather` intent (assuming the utterance matches that intent pattern), but the entities list will be empty or will not contain city/date entities. Entities are optional — the model only extracts them when the relevant information is present in the utterance. Your application code must handle missing entities gracefully (e.g., prompt the user for the missing city).
+
+</details>
+
+**Q3.** You have deployed a CLU model to the "staging" slot and tested it successfully. How do you promote it to production without redeploying?
+
+<details><summary>Answer</summary>
+
+Use the **swap deployments** feature in Language Studio (or via REST API). This swaps the models between the staging and production slots atomically. Client code pointing to the "production" deployment name automatically gets the new model without any code changes or redeployment.
+
+</details>
+
+### Exam Tips
+
+- The exam tests the difference between **built-in NER** (immediate, no training needed, standard categories) and **Custom NER** (requires a Language Studio project, training data, and deployment). Know when each is appropriate.
+- `begin_recognize_custom_entities()` is a **long-running operation** that returns a poller. Built-in methods like `recognize_entities()` return synchronously. The exam may test this distinction.
+- CLU replaces LUIS. If the exam mentions LUIS, the concepts (intents, entities, utterances) are the same. The SDK and portal have changed, but the architecture is identical.
+- Always include diverse `None` intent examples in CLU training. The exam may present a scenario where a model misclassifies unrelated utterances — the fix is adding `None` examples.
+
+---
 
 <!-- section:layer:6 -->
 ## Layer 6: Custom Speech & Voice
 
-> **Advanced** — This section is a placeholder. Step definitions are tracked in the checklist. Full instructional content coming soon.
+- Understand custom speech model training for domain-specific STT
+- Learn the Pronunciation Assessment API and its scoring dimensions
+- Know the Custom Neural Voice workflow and consent requirements
+- Distinguish between Custom voice lite and Professional voice fine-tuning tiers
 
-Explore custom speech model training, pronunciation assessment API, and custom neural voice creation workflow.
+### What You Will Learn
+
+- How to train custom speech models for improved recognition in specialized domains
+- How Pronunciation Assessment evaluates spoken audio against reference text
+- How Custom Neural Voice creates a synthetic voice from professional recordings
+- The responsible AI consent requirement for voice cloning
+
+This maps to exam objectives **D5: Implement custom speech models** and **D5: Create a custom voice** — including understanding when custom models are needed and the responsible AI requirements.
+
+### Concepts
+
+#### Custom Speech (Speech-to-Text)
+
+Core Layer 4 used the standard STT REST API, which works well for general-purpose speech recognition. Custom speech extends this for scenarios where the built-in model struggles — domain-specific vocabulary (medical, legal, technical), accented speech, or noisy environments.
+
+**Training data types:**
+
+| Data Type | What It Is | When to Use |
+|-----------|-----------|-------------|
+| **Plain text** | Text sentences containing domain vocabulary | Language model adaptation — teaches the model to expect your terminology (e.g., drug names, legal terms) |
+| **Audio + human-labeled transcripts** | Audio files paired with exact transcriptions | Acoustic model adaptation — improves recognition for specific accents, recording conditions, or speaker characteristics |
+| **Pronunciation file** | Text file mapping words to phonetic representations | Custom pronunciation — for acronyms, product names, or words the model mispronounces |
+
+**Training workflow:**
+
+1. **Upload data** — Upload your training data to Speech Studio (speech.microsoft.com)
+2. **Create model** — Select a base model and your training data, then train
+3. **Test** — Run test audio through the model and compare word error rate (WER) against the base model
+4. **Deploy** — Deploy to a custom endpoint
+
+Important: a custom speech endpoint has a **different URL** from the standard endpoint. Your application must be configured to point to the custom endpoint URL, not the standard regional endpoint.
+
+**When to use custom speech vs. standard:**
+
+| Scenario | Use Standard | Use Custom |
+|----------|-------------|-----------|
+| General conversation | Yes | No |
+| Medical dictation with drug names | No | Yes — plain text adaptation |
+| Call center with consistent background noise | No | Yes — audio + transcript adaptation |
+| Product with branded terminology | No | Yes — pronunciation file |
+| Clean audio, common vocabulary | Yes | No |
 
 <checkpoint id="l6-custom-stt"></checkpoint>
+
+#### Pronunciation Assessment API
+
+The Pronunciation Assessment API evaluates how well a speaker pronounces words compared to a reference text. It is commonly used in language learning apps and speech therapy tools.
+
+**Scoring dimensions:**
+
+| Score | What It Measures | Range |
+|-------|-----------------|-------|
+| **Accuracy** | Correctness of phoneme and word pronunciation | 0-100 |
+| **Fluency** | Smoothness and naturalness of speech flow | 0-100 |
+| **Completeness** | Proportion of expected words that were actually spoken | 0-100 |
+| **Prosody** | Stress, intonation, speaking speed, and rhythm (optional — enable via `EnableProsodyAssessment`) | 0-100 |
+| **PronScore** | Overall composite score (weighted combination of all available scores above) | 0-100 |
+
+Scores are available at three **granularity levels**: overall (full text), per-word, and per-phoneme. The granularity is controlled by a request parameter.
+
+**Key REST API parameters:**
+
+| Parameter | Values | Purpose |
+|-----------|--------|---------|
+| `referenceText` | The expected text | What the speaker should have said |
+| `gradingSystem` | `FivePoint` or `HundredMark` | Scale for scores (5-point or 100-point) |
+| `granularity` | `Phoneme`, `Word`, `FullText` | Level of detail in the response |
+| `Dimension` | `Basic` or `Comprehensive` | Basic = accuracy only; Comprehensive = all scores (legacy parameter — current SDK uses `EnableProsodyAssessment` for prosody) |
+
+```python
+# Pronunciation Assessment is configured via headers on the STT endpoint.
+# The key header is "Pronunciation-Assessment" with a base64-encoded JSON config:
+import base64
+import json
+
+config = {
+    "ReferenceText": "Hello, how are you today?",
+    "GradingSystem": "HundredMark",
+    "Granularity": "Phoneme",
+    "Dimension": "Comprehensive",
+}
+pronunciation_header = base64.b64encode(
+    json.dumps(config).encode("utf-8")
+).decode("utf-8")
+
+# Then include in headers:
+# "Pronunciation-Assessment": pronunciation_header
+```
+
 <checkpoint id="l6-pronunciation"></checkpoint>
+
+#### Custom Neural Voice (CNV)
+
+Custom Neural Voice lets you create a synthetic TTS voice that sounds like a specific person. This extends the standard neural voices (like `en-US-JennyNeural` from Layer 4) with a voice unique to your brand or application.
+
+**Workflow:**
+
+1. **Record training data** — Professional studio recordings of the voice talent reading scripted sentences. Quality and consistency are critical.
+2. **Submit verbal consent** — The voice talent must provide a **recorded verbal statement** consenting to the creation of a synthetic version of their voice. This is uploaded to Speech Studio as part of the project setup.
+3. **Train the model** — Upload recordings and consent to Speech Studio, then train.
+4. **Deploy** — Deploy the custom voice to an endpoint for use in TTS requests.
+
+**The consent requirement is a responsible AI requirement that the exam explicitly tests.** Without the recorded verbal consent from the voice talent, you cannot create a Custom Neural Voice. This protects individuals from unauthorized voice cloning.
+
+**Two tiers:**
+
+| Tier | Purpose | Access | Quality |
+|------|---------|--------|---------|
+| **Custom voice lite** | Testing and evaluation | Open to all Azure subscribers (deployment for business use requires approved access) | Moderate quality (20-50 utterances) |
+| **Professional voice fine-tuning** | Production workloads | Requires application and approval from Microsoft | High quality (300-2000 utterances) |
+
+To use professional voice fine-tuning, you must submit an application describing your use case, and Microsoft reviews it for responsible AI compliance. This gated access is another exam-testable point. Note: both tiers ultimately require approved access for production deployment.
+
+**Using a custom voice in SSML:**
+
+```xml
+<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
+  <voice name="my-custom-voice-deployment-id">
+    Welcome to our application. How can I help you today?
+  </voice>
+</speak>
+```
+
+The `name` attribute uses your custom voice's deployment ID instead of a built-in voice name like `en-US-JennyNeural`.
+
 <checkpoint id="l6-custom-voice"></checkpoint>
+
+### Exam Tips
+
+- The exam tests **when** to use custom speech vs. standard speech. If the scenario describes domain-specific vocabulary, accents, or noisy environments, custom speech is the answer. For general-purpose recognition, the standard model is sufficient.
+- Pronunciation Assessment is configured via a **base64-encoded JSON header** on the standard STT endpoint — it is not a separate API. Know the five scoring dimensions (accuracy, fluency, completeness, prosody, and overall PronScore).
+- Custom Neural Voice **requires recorded verbal consent** from the voice talent. The exam frequently tests this responsible AI requirement. Without consent, the voice cannot be created regardless of technical readiness.
+- Professional voice fine-tuning requires a **Microsoft approval process**. This is a gating mechanism for responsible AI. The exam may ask what is needed before deploying a custom voice to production.
+- Custom speech endpoints have a **different URL** from standard endpoints. If a scenario asks why recognition fails after training a custom model, check that the application points to the custom endpoint.
+
+---
 
 <!-- section:layer:7 -->
 ## Layer 7: Document Translation & Orchestration Workflow
 
-> **Expert** — This section is a placeholder. Step definitions are tracked in the checklist. Full instructional content coming soon.
+- Understand batch document translation with Azure Blob Storage
+- Learn CLU orchestration workflow for routing across multiple language backends
+- Know multi-region deployment patterns for language and speech services
+- Understand glossary support for consistent terminology in translations
 
-Deep-dive into batch document translation with Azure Translator, orchestration workflow for routing to CLU/QnA/LUIS, and multi-region deployment patterns.
+### What You Will Learn
+
+- How batch document translation preserves formatting and handles multiple file types
+- How orchestration workflow routes user messages to the appropriate language model
+- When and why to deploy language services across multiple regions
+- The differences between Translator (global service) and Speech (regional service) for multi-region architectures
+
+This maps to exam objectives **D5: Translate documents** and **D5: Create an orchestration workflow** — covering batch translation, orchestration patterns, and deployment considerations.
+
+### Concepts
+
+#### Batch Document Translation
+
+Core Layer 3 covered real-time text translation — sending a string and getting a translated string back. Batch document translation handles entire files (PDF, DOCX, PPTX, XLSX, HTML, and more) while **preserving the original formatting**. This is an asynchronous, job-based operation.
+
+**Architecture:**
+
+```
+Source Blob Container          Azure Translator          Target Blob Container
+┌──────────────────┐     POST /batches              ┌──────────────────┐
+│ invoice.pdf      │ ──────────────────────────────► │ invoice_es.pdf   │
+│ report.docx      │     (async job)                 │ report_es.docx   │
+│ slides.pptx      │                                 │ slides_es.pptx   │
+└──────────────────┘                                 └──────────────────┘
+        │                                                    │
+        └──── Both containers need SAS tokens ───────────────┘
+              or managed identity access
+```
+
+**Supported file formats:** PDF, DOCX, PPTX, XLSX, HTML, HTM, MSG, XLF, XLIFF, TSV, TAB, CSV, TXT, RTF. You can query the `GET /translator/document/formats` endpoint for the latest list. The exam may list these in a question about what can be translated.
+
+**REST API flow:**
+
+1. Upload source documents to an Azure Blob Storage container
+2. Create or designate a target Blob Storage container
+3. Generate SAS tokens (or configure managed identity) for both containers
+4. Submit a translation job via `POST` to the batch translation endpoint
+
+```python
+import httpx
+
+endpoint = "https://<translator-resource>.cognitiveservices.azure.com"
+path = "/translator/document/batches"
+
+body = {
+    "inputs": [
+        {
+            "source": {
+                "sourceUrl": "https://<storage>.blob.core.windows.net/source?<SAS>",
+                "language": "en",  # optional — auto-detects if omitted
+            },
+            "targets": [
+                {
+                    "targetUrl": "https://<storage>.blob.core.windows.net/target-es?<SAS>",
+                    "language": "es",
+                },
+                {
+                    "targetUrl": "https://<storage>.blob.core.windows.net/target-fr?<SAS>",
+                    "language": "fr",
+                },
+            ],
+        }
+    ]
+}
+
+url = f"{endpoint}{path}?api-version=2024-05-01"
+response = httpx.post(
+    url,
+    headers={
+        "Ocp-Apim-Subscription-Key": "<key>",
+        "Content-Type": "application/json",
+    },
+    json=body,
+)
+# Response 202 Accepted — job is running asynchronously
+# Poll the job status URL from the "Operation-Location" response header
+```
+
+**Glossary support:** You can attach a glossary file (TSV, CSV, or XLIFF format) to ensure specific terms are always translated consistently. For example, a glossary entry might map "Widget-X100" to "Widget-X100" (untranslated) across all target languages, or map "quarterly report" to a specific term in each target language.
 
 <checkpoint id="l7-doc-translate"></checkpoint>
+
+#### Orchestration Workflow in CLU
+
+An orchestration workflow routes incoming user utterances to the most appropriate backend service. Instead of building one massive CLU model that handles everything, you build specialized models and use orchestration to direct traffic.
+
+**Supported backend targets:**
+
+| Target Type | What It Is |
+|------------|-----------|
+| **CLU project** | A Conversational Language Understanding model (e.g., for flight booking) |
+| **Custom Question Answering** | A knowledge base for FAQ-style queries (replacement for QnA Maker) |
+| **LUIS app** | Legacy Language Understanding app (**retired March 2026** — exists only for migration, not new projects) |
+
+**How it works:**
+
+1. **Create an orchestration project** in Language Studio
+2. **Define routing intents** — each intent maps to a backend target (e.g., `FlightBooking` routes to a CLU project, `FAQ` routes to Custom Question Answering)
+3. **Add training utterances** for each routing intent (so the orchestrator learns which utterances go where)
+4. **Train and deploy** the orchestration model
+5. **Runtime flow:** User message -> Orchestration model predicts the routing intent -> Message is forwarded to the matched backend -> Backend response is returned
+
+```
+User: "Book a flight to Paris"
+  │
+  ▼
+Orchestration Model
+  │ predicts: FlightBooking intent
+  ▼
+CLU Project (Flight Booking)
+  │ extracts: intent=BookFlight, destination=Paris
+  ▼
+Response returned to application
+```
+
+The orchestration model is consumed using the same `ConversationAnalysisClient` and `analyze_conversation()` method from Layer 5, but with `"kind": "Conversation"` and the orchestration project name. The response structure includes which backend was selected and the backend's own response nested within.
+
 <checkpoint id="l7-orchestration"></checkpoint>
+
+#### Multi-Region Deployment Patterns
+
+Deploying language and speech services across multiple Azure regions addresses three concerns: **latency reduction** (serve users from the nearest region), **disaster recovery** (failover if a region goes down), and **data residency compliance** (keep data processing within required geographic boundaries).
+
+**Key considerations by service:**
+
+| Service | Region Behavior | Multi-Region Strategy |
+|---------|----------------|----------------------|
+| **Translator** | Global service — the API endpoint (`api.cognitive.microsofttranslator.com`) has no region affinity | Keys are regional, but the endpoint is global. No region-specific URL needed for the API itself. |
+| **Speech** | Region-specific endpoints (`{region}.stt.speech.microsoft.com`) | Deploy Speech resources in each target region. Route users to the nearest regional endpoint. |
+| **Text Analytics** | Region-specific endpoints (`{resource}.cognitiveservices.azure.com`) | Deploy Language resources per region. Regional endpoint is embedded in the resource URL. |
+| **CLU** | Tied to the Language resource's region | Deploy the same CLU model to Language resources in multiple regions. |
+
+**Routing options:**
+
+- **Azure Traffic Manager** — DNS-based routing. Routes users to the closest healthy endpoint. Works well for speech and text analytics where endpoints are regional.
+- **Azure Front Door** — HTTP-level routing with additional features like caching and WAF. Preferred for web-facing APIs.
+- **Application-level routing** — Your application selects the regional endpoint based on user location or configuration. Simplest approach for small deployments.
+
+**Translator special case:** Because Translator uses a global endpoint, multi-region is less about routing and more about key management. If your primary region's key stops working (e.g., resource deleted or region outage), you need a key from a resource in another region. The API endpoint itself does not change.
+
 <checkpoint id="l7-multi-region"></checkpoint>
+
+### Self-Check Questions
+
+**Q1.** You need to translate 500 PDF invoices from English to Spanish and German while preserving the PDF formatting. Which Azure service and approach should you use?
+
+<details><summary>Answer</summary>
+
+Use **batch document translation** with Azure Translator. Upload the 500 PDFs to an Azure Blob Storage source container. Create target containers for Spanish and German. Submit a single batch translation job with two targets (`es` and `de`). The service translates all documents asynchronously and preserves the PDF formatting. Real-time text translation would not work because it only handles plain text strings, not files.
+
+</details>
+
+**Q2.** Your company has a flight booking CLU model and a customer FAQ knowledge base. Users interact through a single chat interface and sometimes ask booking questions, sometimes FAQ questions. How do you route messages to the correct backend?
+
+<details><summary>Answer</summary>
+
+Create a **CLU orchestration workflow** in Language Studio. Define two routing intents — one that maps to the flight booking CLU project and one that maps to the Custom Question Answering knowledge base. Train the orchestration model with example utterances for each routing intent. At runtime, the orchestration model predicts which backend should handle the user's message and forwards it automatically.
+
+</details>
+
+**Q3.** You are deploying a speech-to-text application that serves users in both the US East and West Europe regions. Why can you not use a single Speech resource for both?
+
+<details><summary>Answer</summary>
+
+Speech services use **region-specific endpoints** (e.g., `eastus.stt.speech.microsoft.com` vs. `westeurope.stt.speech.microsoft.com`). A Speech resource in East US only serves traffic through the East US endpoint. To serve West Europe users with low latency, you need a separate Speech resource deployed in West Europe. Use Azure Traffic Manager or application-level routing to direct users to their nearest regional endpoint.
+
+</details>
+
+**Q4.** A batch document translation job completes, but certain terms in the translated documents are inconsistent — sometimes "quarterly report" is translated one way and sometimes another. How do you enforce consistent terminology?
+
+<details><summary>Answer</summary>
+
+Attach a **glossary file** (TSV, CSV, or XLIFF format) to the batch translation job. The glossary maps source terms to their required translations in each target language. When the Translator encounters a glossary term in a source document, it uses the glossary translation instead of its default translation. This ensures consistent terminology across all 500 documents.
+
+</details>
+
 <checkpoint id="l7-questions"></checkpoint>
+
+### Exam Tips
+
+- Batch document translation is **asynchronous** — you submit a job and poll for completion. The exam may ask about the response code (202 Accepted) and how to check job status (poll the `Operation-Location` header URL).
+- Batch translation requires **Azure Blob Storage** for both source and target. SAS tokens or managed identity must grant read access to the source and write access to the target. The exam tests this access configuration.
+- Orchestration workflow is the **recommended pattern** when you have multiple language models for different domains. The exam may present a scenario with separate CLU models and ask how to unify them behind a single endpoint.
+- Translator uses a **global endpoint** while Speech uses **regional endpoints**. This is a frequent exam distinction. If a question asks about multi-region Speech deployment, the answer involves deploying separate resources per region. For Translator, the endpoint stays the same but keys are regional.
+- Glossary files in batch translation use **TSV, CSV, or XLIFF** format. The exam may ask which formats are supported.
+
+---
 
 <!-- section:exam-tips -->
 ## Exam Quiz
