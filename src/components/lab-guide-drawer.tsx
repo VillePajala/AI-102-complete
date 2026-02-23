@@ -701,6 +701,7 @@ function MarkdownBlock({ content, completedSet, onToggleStep }: {
         rehypePlugins={[rehypeRaw]}
         components={{
           // Inline checkpoint — rendered from <checkpoint id="step-id"></checkpoint> in markdown
+          // @ts-ignore: checkpoint is a custom HTML element parsed via rehype-raw
           checkpoint: ({ id }: { id?: string }) => {
             if (!id || !completedSet || !onToggleStep) return null
             const checked = completedSet.has(id)
