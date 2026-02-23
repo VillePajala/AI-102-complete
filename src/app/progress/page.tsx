@@ -8,6 +8,14 @@ import { Progress } from "@/components/ui/progress"
 import { PageHeader } from "@/components/page-header"
 import { useModuleProgress } from "@/hooks/use-progress"
 import { labModules, examDomains } from "@/lib/modules"
+import {
+  getLabDefinition,
+  getLayersForTier,
+  getAllStepIdsForTier,
+  TIER_HIERARCHY,
+  TIER_META,
+  type LabTier,
+} from "@/lib/lab-steps"
 import { api } from "@/lib/api"
 import {
   CheckSquare,
@@ -18,6 +26,7 @@ import {
   XCircle,
   MinusCircle,
   BarChart3,
+  Layers,
 } from "lucide-react"
 
 interface ValidationResult {
@@ -26,51 +35,52 @@ interface ValidationResult {
   message?: string
 }
 
-const featureLabels: Record<string, string> = {
-  "service-reference": "Service Reference",
-  "resource-checklist": "Resource Checklist",
-  "health-check": "Health Check",
-  notes: "Notes",
-  chat: "Chat Completion",
-  parameters: "Parameter Tuning",
-  "prompt-templates": "Prompt Templates",
-  "image-gen": "Image Generation",
-  models: "Model Selection",
-  "doc-upload": "Document Upload",
-  "rag-chat": "RAG Chat",
-  search: "Search",
-  "index-viewer": "Index Viewer",
-  "agent-config": "Agent Config",
-  "agent-chat": "Agent Chat",
-  "workflow-viz": "Workflow Viz",
-  "agent-list": "Agent List",
-  "image-analysis": "Image Analysis",
-  ocr: "OCR",
-  "custom-vision": "Custom Vision",
-  "text-analysis": "Text Analysis",
-  translation: "Translation",
-  "speech-to-text": "Speech to Text",
-  "text-to-speech": "Text to Speech",
-  "index-mgmt": "Index Management",
-  "data-source": "Data Source",
-  skillset: "Skillset",
-  "query-explorer": "Query Explorer",
-  "doc-intelligence": "Document Intelligence",
-  "content-safety": "Content Safety",
-  "image-safety": "Image Safety",
-  "prompt-shield": "Prompt Shield",
-  blocklists: "Blocklists",
-  governance: "Governance Dashboard",
+const TIER_COLORS: Record<LabTier, string> = {
+  core: "text-emerald-600 dark:text-emerald-400",
+  advanced: "text-amber-600 dark:text-amber-400",
+  expert: "text-red-600 dark:text-red-400",
+}
+
+const TIER_BADGE_CLASSES: Record<LabTier, string> = {
+  core: "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10",
+  advanced: "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10",
+  expert: "border-red-500/30 text-red-600 dark:text-red-400 bg-red-500/10",
+}
+
+function TierSelector({ value, onChange }: { value: LabTier; onChange: (t: LabTier) => void }) {
+  return (
+    <div className="flex items-center rounded-lg border border-border bg-muted/30 p-0.5">
+      {TIER_HIERARCHY.map((tier) => {
+        const active = tier === value
+        return (
+          <button
+            key={tier}
+            type="button"
+            onClick={() => onChange(tier)}
+            className={`px-2 py-0.5 text-[10px] font-semibold rounded-md transition-all ${
+              active
+                ? "bg-background shadow-sm " + TIER_COLORS[tier]
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {TIER_META[tier].label}
+          </button>
+        )
+      })}
+    </div>
+  )
 }
 
 export default function ProgressPage() {
   const {
     progress,
     toggleFeature,
-    getModuleProgress,
+    getModuleProgressForTier,
+    getModuleLayerProgress,
     getDomainProgress,
+    getLabTier,
+    setLabTier,
     overallReadiness,
-    moduleFeatures,
   } = useModuleProgress()
 
   const [validationResults, setValidationResults] = useState<ValidationResult[] | null>(null)
@@ -117,7 +127,7 @@ export default function ProgressPage() {
             <span className={`text-4xl font-extrabold tabular-nums ${readinessColor}`}>
               {overallReadiness}%
             </span>
-            <span className="text-sm text-muted-foreground">features completed</span>
+            <span className="text-sm text-muted-foreground">steps completed</span>
           </div>
           <Progress value={overallReadiness} className="h-3" />
         </CardContent>
@@ -129,9 +139,13 @@ export default function ProgressPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {labModules.map((mod) => {
             const Icon = mod.icon
-            const pct = getModuleProgress(mod.id)
-            const completedFeatures = progress.modules[mod.id] || []
-            const features = moduleFeatures[mod.id]?.features || []
+            const pct = getModuleProgressForTier(mod.id)
+            const lab = getLabDefinition(mod.id)
+            const layerProgress = getModuleLayerProgress(mod.id)
+            const selectedTier = getLabTier(mod.id)
+            const completedSteps = progress.modules[mod.id] || []
+            const completedSet = new Set(completedSteps)
+            const filteredLayers = lab ? getLayersForTier(mod.id, selectedTier) : []
 
             return (
               <Card key={mod.id} className="flex flex-col">
@@ -141,43 +155,116 @@ export default function ProgressPage() {
                       <Icon className={`h-4 w-4 ${mod.color}`} />
                       {mod.name}
                     </CardTitle>
-                    <Badge
-                      variant="outline"
-                      className="text-[11px] font-mono text-muted-foreground"
-                    >
-                      {pct}%
-                    </Badge>
+                    <div className="flex items-center gap-1.5">
+                      {lab && (
+                        <Badge variant="outline" className="text-[11px] font-mono">
+                          <Layers className="h-3 w-3 mr-0.5" />
+                          {layerProgress.completed}/{layerProgress.total}
+                        </Badge>
+                      )}
+                      <Badge
+                        variant="outline"
+                        className="text-[11px] font-mono text-muted-foreground"
+                      >
+                        {pct}%
+                      </Badge>
+                    </div>
                   </div>
                   <Progress value={pct} className="h-1.5 mt-1" />
+                  {/* Tier selector for this module */}
+                  {lab && (
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-[10px] text-muted-foreground font-medium">Difficulty</span>
+                      <TierSelector value={selectedTier} onChange={(t) => setLabTier(mod.id, t)} />
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent className="flex-1 pt-0">
-                  <ul className="space-y-1">
-                    {features.map((featureId) => {
-                      const checked = completedFeatures.includes(featureId)
-                      return (
-                        <li key={featureId}>
-                          <button
-                            type="button"
-                            onClick={() => toggleFeature(mod.id, featureId)}
-                            className="flex w-full items-center gap-2 rounded px-1.5 py-1 text-left text-sm hover:bg-accent/50 transition-colors"
-                          >
-                            {checked ? (
-                              <CheckSquare className="h-4 w-4 shrink-0 text-primary" />
-                            ) : (
-                              <Square className="h-4 w-4 shrink-0 text-muted-foreground" />
-                            )}
-                            <span
-                              className={
-                                checked ? "text-foreground" : "text-muted-foreground"
-                              }
-                            >
-                              {featureLabels[featureId] || featureId}
-                            </span>
-                          </button>
-                        </li>
-                      )
-                    })}
-                  </ul>
+                  {lab ? (
+                    <div className="space-y-2">
+                      {/* Setup steps */}
+                      {lab.setup.length > 0 && (
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                            Setup
+                          </p>
+                          <ul className="space-y-0.5">
+                            {lab.setup.map((step) => {
+                              const checked = completedSet.has(step.id)
+                              return (
+                                <li key={step.id}>
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleFeature(mod.id, step.id)}
+                                    className="flex w-full items-center gap-2 rounded px-1.5 py-0.5 text-left text-xs hover:bg-accent/50 transition-colors"
+                                  >
+                                    {checked ? (
+                                      <CheckSquare className="h-3.5 w-3.5 shrink-0 text-primary" />
+                                    ) : (
+                                      <Square className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                    )}
+                                    <span className={checked ? "text-foreground" : "text-muted-foreground"}>
+                                      {step.label}
+                                    </span>
+                                  </button>
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        </div>
+                      )}
+                      {/* Layers — filtered by tier */}
+                      {filteredLayers.map((layer) => {
+                        const allDone = layer.steps.every((s) => completedSet.has(s.id))
+                        const layerDone = layer.steps.filter((s) => completedSet.has(s.id)).length
+                        return (
+                          <div key={layer.id}>
+                            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1">
+                              {allDone ? (
+                                <CheckSquare className="h-3 w-3 text-primary" />
+                              ) : (
+                                <span className="w-3 text-center font-mono">{layer.id}</span>
+                              )}
+                              {layer.title}
+                              {layer.tier !== "core" && (
+                                <Badge variant="outline" className={`text-[9px] px-1 py-0 font-semibold ${TIER_BADGE_CLASSES[layer.tier]}`}>
+                                  {TIER_META[layer.tier].label}
+                                </Badge>
+                              )}
+                              <span className="font-mono text-muted-foreground/60">
+                                {layerDone}/{layer.steps.length}
+                              </span>
+                            </p>
+                            <ul className="space-y-0.5">
+                              {layer.steps.map((step) => {
+                                const checked = completedSet.has(step.id)
+                                return (
+                                  <li key={step.id}>
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleFeature(mod.id, step.id)}
+                                      className="flex w-full items-center gap-2 rounded px-1.5 py-0.5 text-left text-xs hover:bg-accent/50 transition-colors"
+                                    >
+                                      {checked ? (
+                                        <CheckSquare className="h-3.5 w-3.5 shrink-0 text-primary" />
+                                      ) : (
+                                        <Square className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                      )}
+                                      <span className={checked ? "text-foreground" : "text-muted-foreground"}>
+                                        {step.label}
+                                      </span>
+                                    </button>
+                                  </li>
+                                )
+                              })}
+                            </ul>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">No lab steps defined</p>
+                  )}
                 </CardContent>
               </Card>
             )

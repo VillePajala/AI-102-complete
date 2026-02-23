@@ -27,7 +27,7 @@ async def analyze_text(req: AnalyzeTextRequest):
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         logger.error("Content safety analysis error", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/check-prompt")
@@ -39,4 +39,4 @@ async def check_prompt(req: CheckPromptRequest):
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         logger.error("Prompt shield error", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")

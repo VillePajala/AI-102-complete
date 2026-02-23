@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import {
   Card,
   CardContent,
@@ -10,6 +10,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { PageHeader } from "@/components/page-header"
+import { LabChecklist } from "@/components/lab-checklist"
+import { LabGuideDrawer } from "@/components/lab-guide-drawer"
 import { api, ApiError } from "@/lib/api"
 import {
   MessageSquare,
@@ -60,6 +62,8 @@ export default function LanguagePage() {
         weight="15-20%"
       />
 
+      <LabChecklist labId="language" />
+
       <div className="flex items-center gap-2">
         {[
           { id: "text" as const, label: "Text Analysis", icon: MessageSquare },
@@ -78,6 +82,8 @@ export default function LanguagePage() {
             </Button>
           )
         })}
+        <div className="flex-1" />
+        <LabGuideDrawer labId="language" />
       </div>
 
       {activeTab === "text" && <TextAnalysisTab />}
@@ -340,6 +346,15 @@ function SpeechTab() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
 
+  // Stop microphone on unmount
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop()
+      }
+    }
+  }, [])
+
   async function startRecording() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -388,7 +403,7 @@ function SpeechTab() {
         text: ttsText.trim(),
       })
       const audio = new Audio(res.audio_url)
-      audio.play()
+      audio.play().catch(() => setError("Browser blocked audio playback"))
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to generate speech")
     } finally {

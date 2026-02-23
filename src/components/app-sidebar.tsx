@@ -37,7 +37,13 @@ export function AppSidebar() {
         </div>
 
         {mobileOpen && (
-          <div className="fixed inset-0 z-50 flex">
+          <div
+            className="fixed inset-0 z-50 flex"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation menu"
+            onKeyDown={(e) => { if (e.key === "Escape") setMobileOpen(false) }}
+          >
             <div
               className="absolute inset-0 bg-background/60 backdrop-blur-sm"
               onClick={() => setMobileOpen(false)}

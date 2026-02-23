@@ -46,7 +46,9 @@ export default function FoundryPage() {
     checkBackend()
     const savedChecks = localStorage.getItem("ai102-foundry-checks")
     const savedNotes = localStorage.getItem("ai102-foundry-notes")
-    if (savedChecks) setCheckedItems(JSON.parse(savedChecks))
+    if (savedChecks) {
+      try { setCheckedItems(JSON.parse(savedChecks)) } catch { /* ignore corrupt data */ }
+    }
     if (savedNotes) setNotes(savedNotes)
   }, [])
 

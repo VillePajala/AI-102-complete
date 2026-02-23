@@ -43,10 +43,13 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
 
     if (!shellEl) return
 
+    let wasMobile = shellEl.offsetWidth < MOBILE_BREAKPOINT
     const check = () => {
       const narrow = shellEl.offsetWidth < MOBILE_BREAKPOINT
       setIsMobile(narrow)
-      if (narrow) setMobileOpen(false)
+      // Only close mobile menu on transition from desktop to mobile, not on every resize
+      if (narrow && !wasMobile) setMobileOpen(false)
+      wasMobile = narrow
     }
 
     check()

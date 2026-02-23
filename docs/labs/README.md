@@ -33,6 +33,39 @@ You need these installed on your machine:
 | **npm** | 9+ | `npm --version` |
 | **Python** | 3.10+ | `python3 --version` |
 | **Git** | any | `git --version` |
+| **VS Code** | latest | [code.visualstudio.com](https://code.visualstudio.com/) |
+
+#### Recommended VS Code Extensions
+
+Install these for the best experience:
+
+| Extension | Why | Install Command |
+|-----------|-----|-----------------|
+| **Markdown All in One** | Interactive checkboxes in lab guides | `code --install-extension yzhang.markdown-all-in-one` |
+| **Python** | Python IntelliSense, debugging, linting | `code --install-extension ms-python.python` |
+| **Pylance** | Fast Python type checking | `code --install-extension ms-python.vscode-pylance` |
+| **ESLint** | TypeScript/JavaScript linting | `code --install-extension dbaeumer.vscode-eslint` |
+| **Tailwind CSS IntelliSense** | Autocomplete for Tailwind classes | `code --install-extension bradlc.vscode-tailwindcss` |
+
+Or install all at once:
+```bash
+code --install-extension yzhang.markdown-all-in-one && \
+code --install-extension ms-python.python && \
+code --install-extension ms-python.vscode-pylance && \
+code --install-extension dbaeumer.vscode-eslint && \
+code --install-extension bradlc.vscode-tailwindcss
+```
+
+#### Viewing Lab Guides
+
+The lab guides (`.md` files in this directory) contain **checkboxes** you can tick off as you complete each step. To see and interact with them:
+
+1. Open any lab file (e.g., `01-genai.md`) in VS Code
+2. Press `Ctrl+K V` (or `Cmd+K V` on macOS) to open a **side-by-side preview**
+3. With the **Markdown All in One** extension installed, you can **click the checkboxes** directly in the preview to track your progress
+4. Alternatively, press `Ctrl+Shift+V` for a full-screen preview
+
+> **Tip:** You can also track progress in the browser at http://localhost:3000/progress — it has interactive checklists for each module.
 
 ### Step 2: Clone and Install
 

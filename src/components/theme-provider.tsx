@@ -7,15 +7,20 @@ type Theme = "dark" | "light"
 const ThemeContext = createContext<{
   theme: Theme
   toggleTheme: () => void
-}>({ theme: "dark", toggleTheme: () => {} })
+}>({ theme: "light", toggleTheme: () => {} })
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("dark")
+  // Always init as "light" to match SSR (blocking script handles visual correctness)
+  const [theme, setTheme] = useState<Theme>("light")
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    const stored = localStorage.getItem("ai102-theme") as Theme | null
-    if (stored) setTheme(stored)
+    try {
+      const stored = localStorage.getItem("ai102-theme") as Theme | null
+      if (stored === "light" || stored === "dark") setTheme(stored)
+    } catch {
+      // ignore
+    }
     setMounted(true)
   }, [])
 

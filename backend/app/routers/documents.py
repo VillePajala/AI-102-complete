@@ -50,7 +50,7 @@ async def analyze_document(
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         logger.error("Document analysis error", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/models")

@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { PageHeader } from "@/components/page-header"
+import { LabChecklist } from "@/components/lab-checklist"
+import { LabGuideDrawer } from "@/components/lab-guide-drawer"
 import { api, ApiError } from "@/lib/api"
 import {
   Shield,
@@ -53,8 +55,12 @@ export default function ResponsibleAiPage() {
   // Blocklists
   const [blocklists, setBlocklists] = useState<{ name: string; terms: string[] }[]>(() => {
     if (typeof window === "undefined") return []
-    const saved = localStorage.getItem("ai102-blocklists")
-    return saved ? JSON.parse(saved) : []
+    try {
+      const saved = localStorage.getItem("ai102-blocklists")
+      return saved ? JSON.parse(saved) : []
+    } catch {
+      return []
+    }
   })
   const [newListName, setNewListName] = useState("")
   const [newTerm, setNewTerm] = useState("")
@@ -63,13 +69,21 @@ export default function ResponsibleAiPage() {
   // Governance
   const [checkedGovernance, setCheckedGovernance] = useState<Record<string, boolean>>(() => {
     if (typeof window === "undefined") return {}
-    const saved = localStorage.getItem("ai102-governance")
-    return saved ? JSON.parse(saved) : {}
+    try {
+      const saved = localStorage.getItem("ai102-governance")
+      return saved ? JSON.parse(saved) : {}
+    } catch {
+      return {}
+    }
   })
   const [governanceNotes, setGovernanceNotes] = useState<Record<string, string>>(() => {
     if (typeof window === "undefined") return {}
-    const saved = localStorage.getItem("ai102-governance-notes")
-    return saved ? JSON.parse(saved) : {}
+    try {
+      const saved = localStorage.getItem("ai102-governance-notes")
+      return saved ? JSON.parse(saved) : {}
+    } catch {
+      return {}
+    }
   })
 
   function saveBlocklists(lists: typeof blocklists) {
@@ -147,6 +161,7 @@ export default function ResponsibleAiPage() {
   function deleteBlocklist(idx: number) {
     saveBlocklists(blocklists.filter((_, i) => i !== idx))
     if (activeListIndex === idx) setActiveListIndex(null)
+    else if (activeListIndex !== null && activeListIndex > idx) setActiveListIndex(activeListIndex - 1)
   }
 
   const severityColor = (level: number) =>
@@ -169,6 +184,8 @@ export default function ResponsibleAiPage() {
         weight="cross-cutting"
       />
 
+      <LabChecklist labId="responsible-ai" />
+
       <div className="flex flex-wrap items-center gap-2">
         {tabs.map((tab) => {
           const Icon = tab.icon
@@ -183,6 +200,8 @@ export default function ResponsibleAiPage() {
             </Button>
           )
         })}
+        <div className="flex-1" />
+        <LabGuideDrawer labId="responsible-ai" />
       </div>
 
       {/* Text Safety */}

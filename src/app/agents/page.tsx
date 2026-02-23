@@ -11,6 +11,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { PageHeader } from "@/components/page-header"
+import { LabChecklist } from "@/components/lab-checklist"
+import { LabGuideDrawer } from "@/components/lab-guide-drawer"
 import { api, ApiError } from "@/lib/api"
 import {
   Bot,
@@ -52,8 +54,12 @@ export default function AgentsPage() {
   const [activeTab, setActiveTab] = useState<"config" | "chat" | "workflow">("config")
   const [agents, setAgents] = useState<AgentConfig[]>(() => {
     if (typeof window === "undefined") return []
-    const saved = localStorage.getItem("ai102-agents")
-    return saved ? JSON.parse(saved) : []
+    try {
+      const saved = localStorage.getItem("ai102-agents")
+      return saved ? JSON.parse(saved) : []
+    } catch {
+      return []
+    }
   })
   const [currentAgent, setCurrentAgent] = useState<AgentConfig | null>(null)
   const [editingAgent, setEditingAgent] = useState<AgentConfig>({
@@ -173,6 +179,8 @@ export default function AgentsPage() {
         weight="5-10%"
       />
 
+      <LabChecklist labId="agents" />
+
       <div className="flex items-center gap-2">
         <Button
           variant={activeTab === "config" ? "default" : "secondary"}
@@ -195,6 +203,8 @@ export default function AgentsPage() {
         >
           <GitBranch className="size-3.5" /> Workflow
         </Button>
+        <div className="flex-1" />
+        <LabGuideDrawer labId="agents" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
@@ -370,7 +380,7 @@ export default function AgentsPage() {
                       <input
                         value={chatInput}
                         onChange={(e) => setChatInput(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); sendMessage() } }}
                         placeholder="Send a message to your agent..."
                         className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                       />
