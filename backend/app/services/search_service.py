@@ -1,59 +1,42 @@
-"""Azure AI Search service — stub for guided lab implementation.
-
-Students implement this file layer by layer following docs/labs/02-rag.md and docs/labs/03-knowledge-mining.md.
-The routers (search.py, generative.py) call these functions — signatures must not change.
-"""
-
-import logging
+# Azure AI Search service — implement following docs/labs/02-rag.md and docs/labs/03-knowledge-mining.md
+# Quickstart: https://learn.microsoft.com/en-us/azure/search/search-get-started-text
 
 from app.config import settings
 
-logger = logging.getLogger(__name__)
-
-
 # === LAYER 1: Document Upload (Lab 02, Layer 2) ===
-# TODO: Create a SearchClient and upload documents to the search index
-# SDK: azure-search-documents
-# Docs: https://learn.microsoft.com/en-us/azure/search/search-get-started-text
-# See docs/labs/02-rag.md — Layer 2
+
+### YOUR CODE STARTS HERE ###
+
+# Step 1: Import SearchClient and AzureKeyCredential
+
+### YOUR CODE ENDS HERE ###
 
 
-def upload_document(filename: str, content: str) -> None:
-    """Upload a document to the Azure AI Search index.
+def upload_document(filename, content):
+    ### YOUR CODE STARTS HERE ###
 
-    Called by: search.router /api/search/upload
-    Args:
-        filename: Name of the document file.
-        content: Text content of the document.
-    """
-    if settings.DEMO_MODE:
-        from app.services.mock_data import mock_upload_document
+    # Step 1: Create a SearchClient using settings.AZURE_SEARCH_ENDPOINT,
+    #         settings.AZURE_SEARCH_KEY, and settings.AZURE_SEARCH_INDEX
+    # Step 2: Create a document dict with id, content, source, title fields
+    # Step 3: Call client.upload_documents(documents=[doc])
 
-        return mock_upload_document()
-    raise NotImplementedError(
-        "See docs/labs/02-rag.md — Layer 2. "
-        "Hint: from azure.search.documents import SearchClient"
-    )
+    ### YOUR CODE ENDS HERE ###
+
+    raise NotImplementedError("See docs/labs/02-rag.md — Layer 2")
 
 
 # === LAYER 2: Search Query (Lab 02, Layer 3) ===
-# TODO: Create a SearchClient and call client.search with text queries
-# See docs/labs/02-rag.md — Layer 3
 
 
-def search_documents(query: str) -> list[dict]:
-    """Search the Azure AI Search index and return matching documents.
+def search_documents(query):
+    ### YOUR CODE STARTS HERE ###
 
-    Called by: search.router /api/search/query AND generative.router (for RAG)
-    Args:
-        query: The search query string.
-    Returns: List of dicts with keys: content, score, source, highlights, metadata.
-    """
-    if settings.DEMO_MODE:
-        from app.services.mock_data import mock_search_documents
+    # Step 1: Create a SearchClient using settings.AZURE_SEARCH_ENDPOINT,
+    #         settings.AZURE_SEARCH_KEY, and settings.AZURE_SEARCH_INDEX
+    # Step 2: Call client.search(search_text=query, top=10, highlight_fields="content")
+    # Step 3: Loop over results, build list of dicts with content, score, source, highlights
+    # Step 4: Return the list
 
-        return mock_search_documents()
-    raise NotImplementedError(
-        "See docs/labs/02-rag.md — Layer 3. "
-        "Hint: client.search(search_text=query, top=10, highlight_fields='content')"
-    )
+    ### YOUR CODE ENDS HERE ###
+
+    raise NotImplementedError("See docs/labs/02-rag.md — Layer 3")

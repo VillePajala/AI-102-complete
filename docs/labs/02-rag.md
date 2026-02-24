@@ -160,8 +160,7 @@ You can also test via the backend Swagger UI at `http://localhost:8000/docs` —
 ## Layer 2: Upload Documents
 
 - Add SDK imports to `search_service.py`
-- Implement `_get_search_client()` helper
-- Implement `upload_document()` function
+- Implement `upload_document()` function with inline client creation
 - Test upload via frontend or Swagger UI
 
 ### What You Will Learn
@@ -184,8 +183,8 @@ Document IDs (`id` field) must be unique within the index. If you upload a docum
 
 Open `backend/app/services/search_service.py`. You need to:
 
-1. Create a helper function `_get_search_client()` that returns a `SearchClient`
-2. Implement `upload_document()` to create a document dict and upload it
+1. Add the SDK imports at the top of the file
+2. Implement `upload_document()` with inline client creation and a document dict
 
 Start by adding the imports at the top of the file:
 ```python
@@ -195,33 +194,13 @@ from azure.search.documents import SearchClient
 
 <checkpoint id="l2-imports"></checkpoint>
 
-Then implement the helper and the upload function.
-
-<details>
-<summary>Hint: _get_search_client()</summary>
-
-```python
-def _get_search_client() -> SearchClient:
-    if not settings.AZURE_SEARCH_ENDPOINT or not settings.AZURE_SEARCH_KEY:
-        raise RuntimeError(
-            "Azure AI Search not configured. "
-            "Set AZURE_SEARCH_ENDPOINT and AZURE_SEARCH_KEY."
-        )
-    return SearchClient(
-        endpoint=settings.AZURE_SEARCH_ENDPOINT,
-        index_name=settings.AZURE_SEARCH_INDEX,
-        credential=AzureKeyCredential(settings.AZURE_SEARCH_KEY),
-    )
-```
-
-</details>
-
-<checkpoint id="l2-get-client"></checkpoint>
+Then implement the upload function. Create the `SearchClient` inline at the start of the function.
 
 <details>
 <summary>Hint: upload_document()</summary>
 
 Think about:
+- Create the `SearchClient` inline using `settings.AZURE_SEARCH_ENDPOINT`, `settings.AZURE_SEARCH_INDEX`, and `AzureKeyCredential(settings.AZURE_SEARCH_KEY)`
 - What fields does your index expect? (`id`, `content`, `source`, `title`)
 - The `id` field cannot contain spaces or dots — sanitize the filename
 - Use `client.upload_documents(documents=[doc])` to upload
@@ -243,26 +222,24 @@ Think about:
 <details>
 <summary>Full Solution</summary>
 
+The first `### YOUR CODE ###` block (at the top of the file) needs the imports:
+
 ```python
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
+```
 
+Inside `upload_document()`, replace the `raise NotImplementedError(...)` with:
 
-def _get_search_client() -> SearchClient:
-    if not settings.AZURE_SEARCH_ENDPOINT or not settings.AZURE_SEARCH_KEY:
-        raise RuntimeError(
-            "Azure AI Search not configured. "
-            "Set AZURE_SEARCH_ENDPOINT and AZURE_SEARCH_KEY."
-        )
-    return SearchClient(
+```python
+def upload_document(filename, content):
+    ### YOUR CODE STARTS HERE ###
+
+    client = SearchClient(
         endpoint=settings.AZURE_SEARCH_ENDPOINT,
         index_name=settings.AZURE_SEARCH_INDEX,
         credential=AzureKeyCredential(settings.AZURE_SEARCH_KEY),
     )
-
-
-def upload_document(filename: str, content: str) -> None:
-    client = _get_search_client()
     doc = {
         "id": filename.replace(" ", "_").replace(".", "_"),
         "content": content,
@@ -270,6 +247,8 @@ def upload_document(filename: str, content: str) -> None:
         "title": filename,
     }
     client.upload_documents(documents=[doc])
+
+    ### YOUR CODE ENDS HERE ###
 ```
 
 </details>
@@ -318,7 +297,7 @@ Key parameters for `client.search()`:
 
 Implement `search_documents()` in `search_service.py`. The function should:
 
-1. Get a `SearchClient` using your helper
+1. Create a `SearchClient` inline using your endpoint, index name, and credential
 2. Call `client.search()` with the query
 3. Iterate over results and build a list of dicts
 
@@ -363,9 +342,17 @@ if highlights and "content" in highlights:
 <details>
 <summary>Full Solution</summary>
 
+Inside `search_documents()`, replace the `raise NotImplementedError(...)` with:
+
 ```python
-def search_documents(query: str) -> list[dict]:
-    client = _get_search_client()
+def search_documents(query):
+    ### YOUR CODE STARTS HERE ###
+
+    client = SearchClient(
+        endpoint=settings.AZURE_SEARCH_ENDPOINT,
+        index_name=settings.AZURE_SEARCH_INDEX,
+        credential=AzureKeyCredential(settings.AZURE_SEARCH_KEY),
+    )
     results = client.search(
         search_text=query,
         top=10,
@@ -391,6 +378,8 @@ def search_documents(query: str) -> list[dict]:
             item["metadata"] = metadata
         items.append(item)
     return items
+
+    ### YOUR CODE ENDS HERE ###
 ```
 
 </details>
@@ -445,8 +434,7 @@ Enhance `upload_document()` to split large documents into chunks. A simple fixed
 <summary>Hint: Chunking logic</summary>
 
 ```python
-def _chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> list[str]:
-    """Split text into overlapping chunks."""
+def _chunk_text(text, chunk_size=1000, overlap=200):
     chunks = []
     start = 0
     while start < len(text):
@@ -490,9 +478,10 @@ else:
 <details>
 <summary>Full Solution</summary>
 
+Add `_chunk_text()` as a helper above `upload_document()`, then update the code inside `upload_document()`'s `### YOUR CODE ###` block:
+
 ```python
-def _chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> list[str]:
-    """Split text into overlapping chunks."""
+def _chunk_text(text, chunk_size=1000, overlap=200):
     chunks = []
     start = 0
     while start < len(text):
@@ -502,8 +491,14 @@ def _chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> list[s
     return chunks
 
 
-def upload_document(filename: str, content: str) -> None:
-    client = _get_search_client()
+def upload_document(filename, content):
+    ### YOUR CODE STARTS HERE ###
+
+    client = SearchClient(
+        endpoint=settings.AZURE_SEARCH_ENDPOINT,
+        index_name=settings.AZURE_SEARCH_INDEX,
+        credential=AzureKeyCredential(settings.AZURE_SEARCH_KEY),
+    )
     sanitized = filename.replace(" ", "_").replace(".", "_")
 
     if len(content) > 1000:
@@ -525,6 +520,8 @@ def upload_document(filename: str, content: str) -> None:
             "title": filename,
         }
         client.upload_documents(documents=[doc])
+
+    ### YOUR CODE ENDS HERE ###
 ```
 
 </details>
@@ -768,8 +765,7 @@ If everything from previous layers works, RAG works.
 At this point you should have:
 
 - An Azure AI Search resource with an index (`ai102-index`)
-- `_get_search_client()` helper returning a configured `SearchClient`
-- `upload_document()` uploading documents (with chunking for large files)
+- `upload_document()` creating a `SearchClient` inline and uploading documents (with chunking for large files)
 - `search_documents()` returning results with content, scores, highlights, and metadata
 - Working RAG: chat responses grounded in your uploaded documents
 - Understanding of vector search and hybrid search concepts
@@ -783,31 +779,36 @@ At this point you should have:
 <details><summary>Complete search_service.py (after Lab 02)</summary>
 
 ```python
-import logging
+# Azure AI Search service — implement following docs/labs/02-rag.md and docs/labs/03-knowledge-mining.md
+# Quickstart: https://learn.microsoft.com/en-us/azure/search/search-get-started-text
+
+from app.config import settings
+
+
+# === LAYER 1: Document Upload (Lab 02, Layer 2) ===
+
+### YOUR CODE STARTS HERE ###
+
+# Step 1: Import SearchClient and AzureKeyCredential
 
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
 
-from app.config import settings
-
-logger = logging.getLogger(__name__)
+### YOUR CODE ENDS HERE ###
 
 
-def _get_search_client() -> SearchClient:
-    if not settings.AZURE_SEARCH_ENDPOINT or not settings.AZURE_SEARCH_KEY:
-        raise RuntimeError(
-            "Azure AI Search not configured. "
-            "Set AZURE_SEARCH_ENDPOINT and AZURE_SEARCH_KEY."
-        )
-    return SearchClient(
+def upload_document(filename, content):
+    ### YOUR CODE STARTS HERE ###
+
+    # Step 1: Create a SearchClient inline
+    # Step 2: Create a document dict with id, content, source, title fields
+    # Step 3: Call client.upload_documents(documents=[doc])
+
+    client = SearchClient(
         endpoint=settings.AZURE_SEARCH_ENDPOINT,
         index_name=settings.AZURE_SEARCH_INDEX,
         credential=AzureKeyCredential(settings.AZURE_SEARCH_KEY),
     )
-
-
-def upload_document(filename: str, content: str) -> None:
-    client = _get_search_client()
     doc = {
         "id": filename.replace(" ", "_").replace(".", "_"),
         "content": content,
@@ -816,9 +817,25 @@ def upload_document(filename: str, content: str) -> None:
     }
     client.upload_documents(documents=[doc])
 
+    ### YOUR CODE ENDS HERE ###
 
-def search_documents(query: str) -> list[dict]:
-    client = _get_search_client()
+
+# === LAYER 2: Search Query (Lab 02, Layer 3) ===
+
+
+def search_documents(query):
+    ### YOUR CODE STARTS HERE ###
+
+    # Step 1: Create a SearchClient inline
+    # Step 2: Call client.search(search_text=query, top=10, highlight_fields="content")
+    # Step 3: Loop over results, build list of dicts with content, score, source, highlights
+    # Step 4: Return the list
+
+    client = SearchClient(
+        endpoint=settings.AZURE_SEARCH_ENDPOINT,
+        index_name=settings.AZURE_SEARCH_INDEX,
+        credential=AzureKeyCredential(settings.AZURE_SEARCH_KEY),
+    )
     results = client.search(
         search_text=query,
         top=10,
@@ -827,7 +844,7 @@ def search_documents(query: str) -> list[dict]:
     )
     items = []
     for result in results:
-        item: dict = {
+        item = {
             "content": result.get("content", ""),
             "score": result.get("@search.score", 0.0),
         }
@@ -844,6 +861,8 @@ def search_documents(query: str) -> list[dict]:
             item["metadata"] = metadata
         items.append(item)
     return items
+
+    ### YOUR CODE ENDS HERE ###
 ```
 
 </details>
@@ -924,7 +943,7 @@ Update `search_documents()` in `search_service.py` to support an optional `use_s
 
 You need to:
 
-1. Add a `use_semantic: bool = False` parameter to `search_documents()`
+1. Add a `use_semantic=False` parameter to `search_documents()`
 2. When `use_semantic` is `True`, pass `query_type="semantic"` and `semantic_configuration_name="my-semantic-config"` to `client.search()`
 3. Extract `@search.rerankerScore` and `@search.captions` from each result
 
@@ -932,8 +951,12 @@ You need to:
 <summary>Hint: Semantic search parameters</summary>
 
 ```python
-def search_documents(query: str, use_semantic: bool = False) -> list[dict]:
-    client = _get_search_client()
+def search_documents(query, use_semantic=False):
+    client = SearchClient(
+        endpoint=settings.AZURE_SEARCH_ENDPOINT,
+        index_name=settings.AZURE_SEARCH_INDEX,
+        credential=AzureKeyCredential(settings.AZURE_SEARCH_KEY),
+    )
 
     search_kwargs = {
         "search_text": query,
@@ -993,9 +1016,17 @@ Compare keyword-only and semantic results to see the difference:
 <details>
 <summary>Full Solution</summary>
 
+Inside `search_documents()`, replace the `raise NotImplementedError(...)` with the full implementation. The function signature adds `use_semantic=False`:
+
 ```python
-def search_documents(query: str, use_semantic: bool = False) -> list[dict]:
-    client = _get_search_client()
+def search_documents(query, use_semantic=False):
+    ### YOUR CODE STARTS HERE ###
+
+    client = SearchClient(
+        endpoint=settings.AZURE_SEARCH_ENDPOINT,
+        index_name=settings.AZURE_SEARCH_INDEX,
+        credential=AzureKeyCredential(settings.AZURE_SEARCH_KEY),
+    )
 
     search_kwargs = {
         "search_text": query,
@@ -1012,7 +1043,7 @@ def search_documents(query: str, use_semantic: bool = False) -> list[dict]:
     results = client.search(**search_kwargs)
     items = []
     for result in results:
-        item: dict = {
+        item = {
             "content": result.get("content", ""),
             "score": result.get("@search.score", 0.0),
         }
@@ -1037,6 +1068,8 @@ def search_documents(query: str, use_semantic: bool = False) -> list[dict]:
             item["metadata"] = metadata
         items.append(item)
     return items
+
+    ### YOUR CODE ENDS HERE ###
 ```
 
 </details>
@@ -1124,12 +1157,11 @@ Create a function in `search_service.py` (or a new helper) that calls the Azure 
 ```python
 from openai import AzureOpenAI
 
-def get_embedding(text: str) -> list[float]:
-    """Generate an embedding vector for the given text."""
+def get_embedding(text):
     client = AzureOpenAI(
+        azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
         api_key=settings.AZURE_OPENAI_KEY,
         api_version=settings.AZURE_OPENAI_API_VERSION,
-        azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
     )
     response = client.embeddings.create(
         input=text,
@@ -1162,8 +1194,7 @@ from azure.search.documents.indexes.models import (
     VectorSearchProfile,
 )
 
-def create_vector_index() -> None:
-    """Create or update the search index with vector field support."""
+def create_vector_index():
     index_client = SearchIndexClient(
         endpoint=settings.AZURE_SEARCH_ENDPOINT,
         credential=AzureKeyCredential(settings.AZURE_SEARCH_KEY),
@@ -1225,8 +1256,12 @@ When uploading a document (or chunk), call `get_embedding()` on the content and 
 <summary>Hint: Upload with embeddings</summary>
 
 ```python
-def upload_document(filename: str, content: str) -> None:
-    client = _get_search_client()
+def upload_document(filename, content):
+    client = SearchClient(
+        endpoint=settings.AZURE_SEARCH_ENDPOINT,
+        index_name=settings.AZURE_SEARCH_INDEX,
+        credential=AzureKeyCredential(settings.AZURE_SEARCH_KEY),
+    )
     sanitized = filename.replace(" ", "_").replace(".", "_")
 
     if len(content) > 1000:
@@ -1266,12 +1301,12 @@ Add a `use_vector` parameter to `search_documents()` and construct a `Vectorized
 ```python
 from azure.search.documents.models import VectorizedQuery
 
-def search_documents(
-    query: str,
-    use_semantic: bool = False,
-    use_vector: bool = False,
-) -> list[dict]:
-    client = _get_search_client()
+def search_documents(query, use_semantic=False, use_vector=False):
+    client = SearchClient(
+        endpoint=settings.AZURE_SEARCH_ENDPOINT,
+        index_name=settings.AZURE_SEARCH_INDEX,
+        credential=AzureKeyCredential(settings.AZURE_SEARCH_KEY),
+    )
 
     search_kwargs = {
         "search_text": query,
@@ -1314,6 +1349,8 @@ def search_documents(
 <details>
 <summary>Full Solution</summary>
 
+This shows the complete state of `search_service.py` after implementing Layers 2-4 plus the Layer 8 vector additions:
+
 ```python
 from openai import AzureOpenAI
 from azure.core.credentials import AzureKeyCredential
@@ -1334,12 +1371,11 @@ from azure.search.documents.indexes.models import (
 from app.config import settings
 
 
-def get_embedding(text: str) -> list[float]:
-    """Generate an embedding vector for the given text."""
+def get_embedding(text):
     client = AzureOpenAI(
+        azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
         api_key=settings.AZURE_OPENAI_KEY,
         api_version=settings.AZURE_OPENAI_API_VERSION,
-        azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
     )
     response = client.embeddings.create(
         input=text,
@@ -1348,8 +1384,7 @@ def get_embedding(text: str) -> list[float]:
     return response.data[0].embedding
 
 
-def create_vector_index() -> None:
-    """Create or update the search index with vector support."""
+def create_vector_index():
     index_client = SearchIndexClient(
         endpoint=settings.AZURE_SEARCH_ENDPOINT,
         credential=AzureKeyCredential(settings.AZURE_SEARCH_KEY),
@@ -1399,8 +1434,12 @@ def create_vector_index() -> None:
     index_client.create_or_update_index(index)
 
 
-def upload_document(filename: str, content: str) -> None:
-    client = _get_search_client()
+def upload_document(filename, content):
+    client = SearchClient(
+        endpoint=settings.AZURE_SEARCH_ENDPOINT,
+        index_name=settings.AZURE_SEARCH_INDEX,
+        credential=AzureKeyCredential(settings.AZURE_SEARCH_KEY),
+    )
     sanitized = filename.replace(" ", "_").replace(".", "_")
 
     if len(content) > 1000:
@@ -1426,12 +1465,13 @@ def upload_document(filename: str, content: str) -> None:
         client.upload_documents(documents=[doc])
 
 
-def search_documents(
-    query: str,
-    use_semantic: bool = False,
-    use_vector: bool = False,
-) -> list[dict]:
-    client = _get_search_client()
+def search_documents(query, use_semantic=False, use_vector=False):
+
+    client = SearchClient(
+        endpoint=settings.AZURE_SEARCH_ENDPOINT,
+        index_name=settings.AZURE_SEARCH_INDEX,
+        credential=AzureKeyCredential(settings.AZURE_SEARCH_KEY),
+    )
 
     search_kwargs = {
         "search_text": query,
@@ -1462,7 +1502,7 @@ def search_documents(
     results = client.search(**search_kwargs)
     items = []
     for result in results:
-        item: dict = {
+        item = {
             "content": result.get("content", ""),
             "score": result.get("@search.score", 0.0),
         }

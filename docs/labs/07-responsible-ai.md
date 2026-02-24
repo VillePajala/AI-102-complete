@@ -63,16 +63,16 @@ Responsible AI is not an isolated topic on the AI-102 exam — it is woven into 
 From your Content Safety resource's **Keys and Endpoint** page, copy the endpoint and one of the keys. Edit `backend/.env`:
 
 ```
-AZURE_CONTENT_SAFETY_ENDPOINT=https://your-content-safety.cognitiveservices.azure.com/
-AZURE_CONTENT_SAFETY_KEY=your-key-here
+AZURE_AI_SERVICES_ENDPOINT=https://your-ai-services.cognitiveservices.azure.com/
+AZURE_AI_SERVICES_KEY=your-key-here
 ```
 
 **Where to find each value:**
 
 | Variable | Where to Find It |
 |----------|-----------------|
-| `AZURE_CONTENT_SAFETY_ENDPOINT` | Azure Portal → your Content Safety resource → **Keys and Endpoint** → **Endpoint** |
-| `AZURE_CONTENT_SAFETY_KEY` | Azure Portal → your Content Safety resource → **Keys and Endpoint** → **Key 1** (or Key 2) |
+| `AZURE_AI_SERVICES_ENDPOINT` | Azure Portal → your Content Safety resource → **Keys and Endpoint** → **Endpoint** |
+| `AZURE_AI_SERVICES_KEY` | Azure Portal → your Content Safety resource → **Keys and Endpoint** → **Key 1** (or Key 2) |
 
 <checkpoint id="setup-env-safety"></checkpoint>
 
@@ -86,8 +86,7 @@ Restart the backend server after editing `.env`.
 ## Layer 1: Content Safety Analysis
 
 - Add SDK imports to `safety_service.py`
-- Implement `_get_client()` helper
-- Implement `analyze_text()` with four safety categories
+- Implement `analyze_text()` with inline client creation and four safety categories
 - Test via frontend or Swagger UI
 
 ### What You Will Learn
@@ -129,24 +128,22 @@ The response contains a result object for each of the four categories, with a `s
 
 Open `backend/app/services/safety_service.py`. You need to do two things:
 
-**Step 1: Create a helper function `_get_client()`**
+**Step 1: Add imports**
 
-Write a private function that returns a `ContentSafetyClient`. It should:
+At the top of the file (after the existing imports), add:
 
-- Import `ContentSafetyClient` from `azure.ai.contentsafety`
-- Import `AzureKeyCredential` from `azure.core.credentials`
-- Check that both `settings.AZURE_CONTENT_SAFETY_ENDPOINT` and `settings.AZURE_CONTENT_SAFETY_KEY` are not empty — raise `RuntimeError` with a descriptive message if missing
-- Create and return a `ContentSafetyClient` using the endpoint and an `AzureKeyCredential`
+- `ContentSafetyClient` from `azure.ai.contentsafety`
+- `AzureKeyCredential` from `azure.core.credentials`
+- `AnalyzeTextOptions` from `azure.ai.contentsafety.models`
 
 <checkpoint id="l1-imports"></checkpoint>
-
-<checkpoint id="l1-get-client"></checkpoint>
 
 **Step 2: Implement `analyze_text()`**
 
 Replace the `raise NotImplementedError(...)` line. Your implementation should:
 
-- Call `_get_client()` to get a client
+- Check that both `settings.AZURE_AI_SERVICES_ENDPOINT` and `settings.AZURE_AI_SERVICES_KEY` are not empty — raise `RuntimeError` with a descriptive message if missing
+- Create a `ContentSafetyClient` inline using the endpoint and an `AzureKeyCredential`
 - Import and create an `AnalyzeTextOptions` with the input text
 - Call `client.analyze_text()` with the options
 - Read the result for each of the four categories from the response (attributes: `hate_result`, `self_harm_result`, `sexual_result`, `violence_result`)
@@ -164,20 +161,17 @@ from azure.ai.contentsafety.models import AnalyzeTextOptions
 from azure.core.credentials import AzureKeyCredential
 
 
-def _get_client() -> ContentSafetyClient:
-    if not settings.AZURE_CONTENT_SAFETY_ENDPOINT or not ___:
+def analyze_text(text):
+    ### YOUR CODE STARTS HERE ###
+    if not settings.AZURE_AI_SERVICES_ENDPOINT or not ___:
         raise RuntimeError(
             "Azure Content Safety not configured. "
-            "Set AZURE_CONTENT_SAFETY_ENDPOINT and AZURE_CONTENT_SAFETY_KEY."
+            "Set AZURE_AI_SERVICES_ENDPOINT and AZURE_AI_SERVICES_KEY."
         )
-    return ContentSafetyClient(
+    client = ContentSafetyClient(
         endpoint=___,
         credential=AzureKeyCredential(___),
     )
-
-
-def analyze_text(text: str) -> dict:
-    client = _get_client()
     request = AnalyzeTextOptions(text=___)
     response = client.analyze_text(___)
 
@@ -196,6 +190,7 @@ def analyze_text(text: str) -> dict:
             })
 
     return {"categories": categories}
+    ### YOUR CODE ENDS HERE ###
 ```
 
 Things to figure out:
@@ -249,26 +244,20 @@ from azure.ai.contentsafety.models import AnalyzeTextOptions
 from azure.core.credentials import AzureKeyCredential
 ```
 
-Add the `_get_client` helper:
+Replace the `### YOUR CODE STARTS HERE ###` section inside `analyze_text`:
 
 ```python
-def _get_client() -> ContentSafetyClient:
-    if not settings.AZURE_CONTENT_SAFETY_ENDPOINT or not settings.AZURE_CONTENT_SAFETY_KEY:
+def analyze_text(text):
+    ### YOUR CODE STARTS HERE ###
+    if not settings.AZURE_AI_SERVICES_ENDPOINT or not settings.AZURE_AI_SERVICES_KEY:
         raise RuntimeError(
             "Azure Content Safety not configured. "
-            "Set AZURE_CONTENT_SAFETY_ENDPOINT and AZURE_CONTENT_SAFETY_KEY."
+            "Set AZURE_AI_SERVICES_ENDPOINT and AZURE_AI_SERVICES_KEY."
         )
-    return ContentSafetyClient(
-        endpoint=settings.AZURE_CONTENT_SAFETY_ENDPOINT,
-        credential=AzureKeyCredential(settings.AZURE_CONTENT_SAFETY_KEY),
+    client = ContentSafetyClient(
+        endpoint=settings.AZURE_AI_SERVICES_ENDPOINT,
+        credential=AzureKeyCredential(settings.AZURE_AI_SERVICES_KEY),
     )
-```
-
-Replace the body of `analyze_text`:
-
-```python
-def analyze_text(text: str) -> dict:
-    client = _get_client()
     request = AnalyzeTextOptions(text=text)
     response = client.analyze_text(request)
     categories = []
@@ -286,6 +275,7 @@ def analyze_text(text: str) -> dict:
                 "label": str(result.severity),
             })
     return {"categories": categories}
+    ### YOUR CODE ENDS HERE ###
 ```
 
 </details>
@@ -352,7 +342,7 @@ Change the `label` value in each category dict from `str(result.severity)` to `_
 <details><summary>Hint</summary>
 
 ```python
-def _severity_label(severity: int) -> str:
+def _severity_label(severity):
     if severity <= 0:
         return "___"
     if severity <= 2:
@@ -399,7 +389,7 @@ Via Swagger UI, the same safe text request should now return:
 Add this helper function (before `analyze_text`):
 
 ```python
-def _severity_label(severity: int) -> str:
+def _severity_label(severity):
     if severity <= 0:
         return "Safe"
     if severity <= 2:
@@ -409,11 +399,20 @@ def _severity_label(severity: int) -> str:
     return "High"
 ```
 
-Update the `analyze_text` function to use the helper:
+Update the `### YOUR CODE STARTS HERE ###` section inside `analyze_text` to use the helper:
 
 ```python
-def analyze_text(text: str) -> dict:
-    client = _get_client()
+def analyze_text(text):
+    ### YOUR CODE STARTS HERE ###
+    if not settings.AZURE_AI_SERVICES_ENDPOINT or not settings.AZURE_AI_SERVICES_KEY:
+        raise RuntimeError(
+            "Azure Content Safety not configured. "
+            "Set AZURE_AI_SERVICES_ENDPOINT and AZURE_AI_SERVICES_KEY."
+        )
+    client = ContentSafetyClient(
+        endpoint=settings.AZURE_AI_SERVICES_ENDPOINT,
+        credential=AzureKeyCredential(settings.AZURE_AI_SERVICES_KEY),
+    )
     request = AnalyzeTextOptions(text=text)
     response = client.analyze_text(request)
     categories = []
@@ -431,6 +430,7 @@ def analyze_text(text: str) -> dict:
                 "label": _severity_label(result.severity),
             })
     return {"categories": categories}
+    ### YOUR CODE ENDS HERE ###
 ```
 
 </details>
@@ -497,8 +497,17 @@ If all categories are at severity 2 or below, return `{"flagged": False}`.
 <details><summary>Hint</summary>
 
 ```python
-def check_prompt(prompt: str) -> dict:
-    client = _get_client()
+def check_prompt(prompt):
+    ### YOUR CODE STARTS HERE ###
+    if not settings.AZURE_AI_SERVICES_ENDPOINT or not settings.AZURE_AI_SERVICES_KEY:
+        raise RuntimeError(
+            "Azure Content Safety not configured. "
+            "Set AZURE_AI_SERVICES_ENDPOINT and AZURE_AI_SERVICES_KEY."
+        )
+    client = ContentSafetyClient(
+        endpoint=___,
+        credential=AzureKeyCredential(___),
+    )
     request = AnalyzeTextOptions(text=___)
     response = client.analyze_text(request)
 
@@ -524,6 +533,7 @@ def check_prompt(prompt: str) -> dict:
             f"(severity {max_severity}/6)"
         )
     return result
+    ### YOUR CODE ENDS HERE ###
 ```
 
 The threshold is severity > 2 (anything in the Medium or High range gets flagged).
@@ -572,8 +582,17 @@ For a flagged prompt, the response would look like:
 <details><summary>Full Solution</summary>
 
 ```python
-def check_prompt(prompt: str) -> dict:
-    client = _get_client()
+def check_prompt(prompt):
+    ### YOUR CODE STARTS HERE ###
+    if not settings.AZURE_AI_SERVICES_ENDPOINT or not settings.AZURE_AI_SERVICES_KEY:
+        raise RuntimeError(
+            "Azure Content Safety not configured. "
+            "Set AZURE_AI_SERVICES_ENDPOINT and AZURE_AI_SERVICES_KEY."
+        )
+    client = ContentSafetyClient(
+        endpoint=settings.AZURE_AI_SERVICES_ENDPOINT,
+        credential=AzureKeyCredential(settings.AZURE_AI_SERVICES_KEY),
+    )
     request = AnalyzeTextOptions(text=prompt)
     response = client.analyze_text(request)
 
@@ -600,6 +619,7 @@ def check_prompt(prompt: str) -> dict:
             f"(severity {max_severity}/6)"
         )
     return result
+    ### YOUR CODE ENDS HERE ###
 ```
 
 </details>
@@ -621,40 +641,35 @@ After completing all three layers, verify everything works:
 - **Prompt check works**: Safe prompts return `flagged: false`; harmful content returns `flagged: true` with a reason
 - **No errors in backend terminal**: The uvicorn output should show 200 status codes for both `/api/safety/analyze-text` and `/api/safety/check-prompt`
 
-Your `safety_service.py` should now have four implemented pieces:
+Your `safety_service.py` should now have three implemented pieces:
 
-1. `_get_client()` — helper that creates a `ContentSafetyClient`
-2. `_severity_label()` — maps numeric severity to a label string
-3. `analyze_text()` — analyzes text and returns categorized severity results
-4. `check_prompt()` — checks a prompt for harmful content and returns a flagged/unflagged verdict
+1. `_severity_label()` — maps numeric severity to a label string
+2. `analyze_text()` — creates a `ContentSafetyClient`, analyzes text, and returns categorized severity results
+3. `check_prompt()` — creates a `ContentSafetyClient`, checks a prompt for harmful content, and returns a flagged/unflagged verdict
 
 <details><summary>Complete safety_service.py</summary>
 
 ```python
-import logging
+# Azure Content Safety service — implement following docs/labs/07-responsible-ai.md
+# Quickstart: https://learn.microsoft.com/en-us/azure/ai-services/content-safety/quickstart-text
+
+from app.config import settings
+
+
+# === LAYER 1: Content Safety Analysis (Lab 07, Layer 1) ===
+
+### YOUR CODE STARTS HERE ###
 
 from azure.ai.contentsafety import ContentSafetyClient
 from azure.ai.contentsafety.models import AnalyzeTextOptions
 from azure.core.credentials import AzureKeyCredential
 
-from app.config import settings
-
-logger = logging.getLogger(__name__)
+### YOUR CODE ENDS HERE ###
 
 
-def _get_client() -> ContentSafetyClient:
-    if not settings.AZURE_CONTENT_SAFETY_ENDPOINT or not settings.AZURE_CONTENT_SAFETY_KEY:
-        raise RuntimeError(
-            "Azure Content Safety not configured. "
-            "Set AZURE_CONTENT_SAFETY_ENDPOINT and AZURE_CONTENT_SAFETY_KEY."
-        )
-    return ContentSafetyClient(
-        endpoint=settings.AZURE_CONTENT_SAFETY_ENDPOINT,
-        credential=AzureKeyCredential(settings.AZURE_CONTENT_SAFETY_KEY),
-    )
+# === LAYER 2: Severity Interpretation (Lab 07, Layer 2) ===
 
-
-def _severity_label(severity: int) -> str:
+def _severity_label(severity):
     if severity <= 0:
         return "Safe"
     if severity <= 2:
@@ -664,8 +679,17 @@ def _severity_label(severity: int) -> str:
     return "High"
 
 
-def analyze_text(text: str) -> dict:
-    client = _get_client()
+def analyze_text(text):
+    ### YOUR CODE STARTS HERE ###
+    if not settings.AZURE_AI_SERVICES_ENDPOINT or not settings.AZURE_AI_SERVICES_KEY:
+        raise RuntimeError(
+            "Azure Content Safety not configured. "
+            "Set AZURE_AI_SERVICES_ENDPOINT and AZURE_AI_SERVICES_KEY."
+        )
+    client = ContentSafetyClient(
+        endpoint=settings.AZURE_AI_SERVICES_ENDPOINT,
+        credential=AzureKeyCredential(settings.AZURE_AI_SERVICES_KEY),
+    )
     request = AnalyzeTextOptions(text=text)
     response = client.analyze_text(request)
 
@@ -685,10 +709,22 @@ def analyze_text(text: str) -> dict:
             })
 
     return {"categories": categories}
+    ### YOUR CODE ENDS HERE ###
 
 
-def check_prompt(prompt: str) -> dict:
-    client = _get_client()
+# === LAYER 3: Prompt Shield (Lab 07, Layer 3) ===
+
+def check_prompt(prompt):
+    ### YOUR CODE STARTS HERE ###
+    if not settings.AZURE_AI_SERVICES_ENDPOINT or not settings.AZURE_AI_SERVICES_KEY:
+        raise RuntimeError(
+            "Azure Content Safety not configured. "
+            "Set AZURE_AI_SERVICES_ENDPOINT and AZURE_AI_SERVICES_KEY."
+        )
+    client = ContentSafetyClient(
+        endpoint=settings.AZURE_AI_SERVICES_ENDPOINT,
+        credential=AzureKeyCredential(settings.AZURE_AI_SERVICES_KEY),
+    )
     request = AnalyzeTextOptions(text=prompt)
     response = client.analyze_text(request)
 
@@ -707,13 +743,14 @@ def check_prompt(prompt: str) -> dict:
             flagged_categories.append(name)
 
     flagged = max_severity > 2
-    result: dict = {"flagged": flagged}
+    result = {"flagged": flagged}
     if flagged:
         result["reason"] = (
             f"Content flagged for: {', '.join(flagged_categories)} "
             f"(severity {max_severity}/6)"
         )
     return result
+    ### YOUR CODE ENDS HERE ###
 ```
 
 </details>
@@ -774,7 +811,7 @@ Open `backend/app/services/safety_service.py`. You will add three new functions.
 Write a function `create_blocklist(name, description)` that:
 
 - Imports `BlocklistClient` from `azure.ai.contentsafety`
-- Creates a `BlocklistClient` using the same endpoint and credential as `_get_client()`
+- Creates a `BlocklistClient` using the same endpoint and `AzureKeyCredential` as in the other functions
 - Calls `client.create_or_update_text_blocklist()` with the blocklist name and description
 - Returns the created blocklist object
 
@@ -790,7 +827,7 @@ Write a function `add_blocklist_items(blocklist_name, items)` that:
 
 Then update or create an `analyze_text_with_blocklist(text, blocklist_names)` function that:
 
-- Calls `_get_client()` to get a `ContentSafetyClient`
+- Creates a `ContentSafetyClient` inline using the endpoint and an `AzureKeyCredential`
 - Creates `AnalyzeTextOptions` with both `text` and `blocklist_names` parameters
 - Calls `client.analyze_text()` and checks `response.blocklists_match` for any matched blocklist items
 - Returns both the standard category results and any blocklist matches
@@ -821,7 +858,7 @@ from azure.ai.contentsafety.models import (
 )
 
 
-def create_blocklist(name: str, description: str) -> dict:
+def create_blocklist(name, description):
     client = BlocklistClient(
         endpoint=___,
         credential=AzureKeyCredential(___),
@@ -833,10 +870,10 @@ def create_blocklist(name: str, description: str) -> dict:
     return {"name": blocklist.blocklist_name, "description": blocklist.description}
 
 
-def add_blocklist_items(blocklist_name: str, items: list[dict]) -> dict:
+def add_blocklist_items(blocklist_name, items):
     client = BlocklistClient(
-        endpoint=settings.AZURE_CONTENT_SAFETY_ENDPOINT,
-        credential=AzureKeyCredential(settings.AZURE_CONTENT_SAFETY_KEY),
+        endpoint=settings.AZURE_AI_SERVICES_ENDPOINT,
+        credential=AzureKeyCredential(settings.AZURE_AI_SERVICES_KEY),
     )
     blocklist_items = [
         TextBlocklistItem(text=item["text"], description=item.get("description", ""))
@@ -849,8 +886,11 @@ def add_blocklist_items(blocklist_name: str, items: list[dict]) -> dict:
     return {"added_count": len(result.blocklist_items)}
 
 
-def analyze_text_with_blocklist(text: str, blocklist_names: list[str]) -> dict:
-    client = _get_client()
+def analyze_text_with_blocklist(text, blocklist_names):
+    client = ContentSafetyClient(
+        endpoint=settings.AZURE_AI_SERVICES_ENDPOINT,
+        credential=AzureKeyCredential(settings.AZURE_AI_SERVICES_KEY),
+    )
     request = AnalyzeTextOptions(text=text, blocklist_names=___)
     response = client.analyze_text(request)
 
@@ -931,10 +971,10 @@ from azure.ai.contentsafety.models import (
 Add the blocklist functions:
 
 ```python
-def create_blocklist(name: str, description: str) -> dict:
+def create_blocklist(name, description):
     client = BlocklistClient(
-        endpoint=settings.AZURE_CONTENT_SAFETY_ENDPOINT,
-        credential=AzureKeyCredential(settings.AZURE_CONTENT_SAFETY_KEY),
+        endpoint=settings.AZURE_AI_SERVICES_ENDPOINT,
+        credential=AzureKeyCredential(settings.AZURE_AI_SERVICES_KEY),
     )
     blocklist = client.create_or_update_text_blocklist(
         blocklist_name=name,
@@ -943,10 +983,10 @@ def create_blocklist(name: str, description: str) -> dict:
     return {"name": blocklist.blocklist_name, "description": blocklist.description}
 
 
-def add_blocklist_items(blocklist_name: str, items: list[dict]) -> dict:
+def add_blocklist_items(blocklist_name, items):
     client = BlocklistClient(
-        endpoint=settings.AZURE_CONTENT_SAFETY_ENDPOINT,
-        credential=AzureKeyCredential(settings.AZURE_CONTENT_SAFETY_KEY),
+        endpoint=settings.AZURE_AI_SERVICES_ENDPOINT,
+        credential=AzureKeyCredential(settings.AZURE_AI_SERVICES_KEY),
     )
     blocklist_items = [
         TextBlocklistItem(text=item["text"], description=item.get("description", ""))
@@ -959,8 +999,11 @@ def add_blocklist_items(blocklist_name: str, items: list[dict]) -> dict:
     return {"added_count": len(result.blocklist_items)}
 
 
-def analyze_text_with_blocklist(text: str, blocklist_names: list[str]) -> dict:
-    client = _get_client()
+def analyze_text_with_blocklist(text, blocklist_names):
+    client = ContentSafetyClient(
+        endpoint=settings.AZURE_AI_SERVICES_ENDPOINT,
+        credential=AzureKeyCredential(settings.AZURE_AI_SERVICES_KEY),
+    )
     request = AnalyzeTextOptions(text=text, blocklist_names=blocklist_names)
     response = client.analyze_text(request)
 
@@ -1108,9 +1151,9 @@ Write a wrapper function `validate_rag_response(source_docs, llm_response, thres
 import requests
 
 
-def check_groundedness(source_text: str, generated_text: str, user_query: str = "") -> dict:
-    endpoint = settings.AZURE_CONTENT_SAFETY_ENDPOINT.rstrip("/")
-    api_key = settings.AZURE_CONTENT_SAFETY_KEY
+def check_groundedness(source_text, generated_text, user_query=""):
+    endpoint = settings.AZURE_AI_SERVICES_ENDPOINT.rstrip("/")
+    api_key = settings.AZURE_AI_SERVICES_KEY
     url = f"{endpoint}/contentsafety/text:detectGroundedness?api-version=2024-09-15-preview"
 
     headers = {
@@ -1141,11 +1184,7 @@ def check_groundedness(source_text: str, generated_text: str, user_query: str = 
     }
 
 
-def validate_rag_response(
-    source_docs: list[str],
-    llm_response: str,
-    threshold: float = 0.2,
-) -> dict:
+def validate_rag_response(source_docs, llm_response, threshold=0.2):
     combined_source = "\n\n".join(___)
     result = check_groundedness(___, ___)
 
@@ -1197,9 +1236,9 @@ import requests
 Add the groundedness functions:
 
 ```python
-def check_groundedness(source_text: str, generated_text: str, user_query: str = "") -> dict:
-    endpoint = settings.AZURE_CONTENT_SAFETY_ENDPOINT.rstrip("/")
-    api_key = settings.AZURE_CONTENT_SAFETY_KEY
+def check_groundedness(source_text, generated_text, user_query=""):
+    endpoint = settings.AZURE_AI_SERVICES_ENDPOINT.rstrip("/")
+    api_key = settings.AZURE_AI_SERVICES_KEY
     url = f"{endpoint}/contentsafety/text:detectGroundedness?api-version=2024-09-15-preview"
 
     headers = {
@@ -1230,11 +1269,7 @@ def check_groundedness(source_text: str, generated_text: str, user_query: str = 
     }
 
 
-def validate_rag_response(
-    source_docs: list[str],
-    llm_response: str,
-    threshold: float = 0.2,
-) -> dict:
+def validate_rag_response(source_docs, llm_response, threshold=0.2):
     combined_source = "\n\n".join(source_docs)
     result = check_groundedness(combined_source, llm_response)
 
@@ -1513,7 +1548,7 @@ D) Content categories
 
 | Concept | How You Used It | Exam Relevance |
 |---------|----------------|----------------|
-| `ContentSafetyClient` creation | `_get_client()` with endpoint + credential | Client setup question type |
+| `ContentSafetyClient` creation | Inline creation with endpoint + `AzureKeyCredential` | Client setup question type |
 | Four content categories | Hate, SelfHarm, Sexual, Violence | Memorize these — directly tested |
 | Severity scale (default 4-level: 0, 2, 4, 6) | `_severity_label()` mapping | Threshold selection scenarios |
 | Text analysis | `client.analyze_text()` with `AnalyzeTextOptions` | Core Content Safety API |

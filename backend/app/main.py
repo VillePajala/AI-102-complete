@@ -49,6 +49,28 @@ app.include_router(progress.router)
 app.include_router(validate.router)
 
 
+# Demo mode: replace service functions with mock data
+if settings.DEMO_MODE:
+    from app.services import (
+        mock_data, openai_service, vision_service,
+        language_service, search_service, document_service, safety_service,
+    )
+    openai_service.chat_completion = mock_data.mock_chat_completion
+    openai_service.generate_image = mock_data.mock_generate_image
+    openai_service.chat_with_tools = mock_data.mock_chat_with_tools
+    vision_service.analyze_image = mock_data.mock_analyze_image
+    vision_service.ocr_image = mock_data.mock_ocr_image
+    language_service.analyze_text = mock_data.mock_analyze_text
+    language_service.translate_text = mock_data.mock_translate_text
+    language_service.speech_to_text = mock_data.mock_speech_to_text
+    language_service.text_to_speech = mock_data.mock_text_to_speech
+    search_service.upload_document = mock_data.mock_upload_document
+    search_service.search_documents = mock_data.mock_search_documents
+    document_service.analyze_document = mock_data.mock_analyze_document
+    safety_service.analyze_text = mock_data.mock_safety_analyze_text
+    safety_service.check_prompt = mock_data.mock_check_prompt
+
+
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "demo_mode": settings.DEMO_MODE}

@@ -1,112 +1,78 @@
-"""Azure Language & Speech services — stub for guided lab implementation.
-
-Students implement this file layer by layer following docs/labs/05-language.md.
-The router (language.py) calls these functions — signatures must not change.
-"""
-
-import logging
+# Azure Language & Speech services — implement following docs/labs/05-language.md
+# Quickstart: https://learn.microsoft.com/en-us/azure/ai-services/language-service/sentiment-opinion-mining/quickstart
 
 from app.config import settings
 
-logger = logging.getLogger(__name__)
-
-
 # === LAYER 1: Sentiment Analysis (Lab 05, Layer 1) ===
-# TODO: Create a TextAnalyticsClient and call analyze_sentiment, extract_key_phrases,
-#       recognize_entities, recognize_pii_entities, detect_language
-# SDK: azure-ai-textanalytics
-# Docs: https://learn.microsoft.com/en-us/azure/ai-services/language-service/sentiment-opinion-mining/quickstart
-# See docs/labs/05-language.md — Layer 1
+
+### YOUR CODE STARTS HERE ###
+
+# Step 1: Import TextAnalyticsClient and AzureKeyCredential
+
+### YOUR CODE ENDS HERE ###
 
 
-def analyze_text(text: str, analysis_type: str = "all") -> dict:
-    """Analyze text for sentiment, key phrases, entities, PII, and language.
+def analyze_text(text, analysis_type="all"):
+    ### YOUR CODE STARTS HERE ###
 
-    Called by: language.router /api/language/analyze
-    Args:
-        text: The text to analyze.
-        analysis_type: One of "all", "sentiment", "keyPhrases", "entities", "pii", "language".
-    Returns: Dict with results for the requested analysis type(s).
-    """
-    if settings.DEMO_MODE:
-        from app.services.mock_data import mock_analyze_text
+    # Step 1: Create a TextAnalyticsClient using settings.AZURE_AI_SERVICES_ENDPOINT
+    #         and settings.AZURE_AI_SERVICES_KEY
+    # Step 2: Based on analysis_type, call the appropriate method:
+    #         "sentiment" → client.analyze_sentiment()
+    #         "keyPhrases" → client.extract_key_phrases()
+    #         "entities" → client.recognize_entities()
+    #         "pii" → client.recognize_pii_entities()
+    #         "language" → client.detect_language()
+    #         "all" → call all of the above
+    # Step 3: Return dict with results
 
-        return mock_analyze_text()
-    raise NotImplementedError(
-        "See docs/labs/05-language.md — Layer 1. "
-        "Hint: from azure.ai.textanalytics import TextAnalyticsClient"
-    )
+    ### YOUR CODE ENDS HERE ###
+
+    raise NotImplementedError("See docs/labs/05-language.md — Layer 1")
 
 
 # === LAYER 2: NLP Features (Lab 05, Layer 2) ===
-# Layer 2 extends analyze_text to handle entities, PII, and language detection.
-# No new function — you add more analysis types to your Layer 1 implementation.
+# No new function — add entities, PII, language detection to Layer 1.
 
 
 # === LAYER 3: Translation (Lab 05, Layer 3) ===
-# TODO: Call the Azure Translator REST API using httpx
-# API: https://api.cognitive.microsofttranslator.com/translate
-# See docs/labs/05-language.md — Layer 3
 
 
-def translate_text(text: str, source: str, target: str) -> str:
-    """Translate text between languages using the Translator REST API.
+def translate_text(text, source, target):
+    ### YOUR CODE STARTS HERE ###
 
-    Called by: language.router /api/language/translate
-    Args:
-        text: The text to translate.
-        source: Source language code (or "auto" for auto-detection).
-        target: Target language code (e.g. "es", "fr", "de").
-    Returns: The translated text string.
-    """
-    if settings.DEMO_MODE:
-        from app.services.mock_data import mock_translate_text
+    # Step 1: Import httpx
+    # Step 2: POST to https://api.cognitive.microsofttranslator.com/translate
+    # Step 3: Pass settings.AZURE_AI_SERVICES_KEY in Ocp-Apim-Subscription-Key header
+    # Step 4: Return the translated text string
 
-        return mock_translate_text()
-    raise NotImplementedError(
-        "See docs/labs/05-language.md — Layer 3. "
-        "Hint: import httpx — REST API call to api.cognitive.microsofttranslator.com"
-    )
+    ### YOUR CODE ENDS HERE ###
+
+    raise NotImplementedError("See docs/labs/05-language.md — Layer 3")
 
 
 # === LAYER 4: Speech Services (Lab 05, Layer 4) ===
-# TODO: Call the Azure Speech REST APIs for STT and TTS
-# STT endpoint: https://{region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1
-# TTS endpoint: https://{region}.tts.speech.microsoft.com/cognitiveservices/v1
-# See docs/labs/05-language.md — Layer 4
 
 
-def speech_to_text(audio_bytes: bytes) -> str:
-    """Convert speech audio to text using the Speech REST API.
+def speech_to_text(audio_bytes):
+    ### YOUR CODE STARTS HERE ###
 
-    Called by: language.router /api/language/speech-to-text
-    Args:
-        audio_bytes: WAV audio file contents.
-    Returns: The recognized text string.
-    """
-    if settings.DEMO_MODE:
-        from app.services.mock_data import mock_speech_to_text
+    # Step 1: Import httpx
+    # Step 2: POST audio/wav to {region}.stt.speech.microsoft.com
+    # Step 3: Return the recognized text string
 
-        return mock_speech_to_text()
-    raise NotImplementedError(
-        "See docs/labs/05-language.md — Layer 4. "
-        "Hint: import httpx — POST audio/wav to {region}.stt.speech.microsoft.com"
-    )
+    ### YOUR CODE ENDS HERE ###
+
+    raise NotImplementedError("See docs/labs/05-language.md — Layer 4")
 
 
-def text_to_speech(text: str) -> str:
-    """Convert text to speech audio using the Speech REST API.
+def text_to_speech(text):
+    ### YOUR CODE STARTS HERE ###
 
-    Called by: language.router /api/language/text-to-speech
-    Args:
-        text: The text to synthesize.
-    Returns: Base64 data URL string (data:audio/mp3;base64,...).
-    """
-    if settings.DEMO_MODE:
-        from app.services.mock_data import mock_text_to_speech
+    # Step 1: Import httpx, base64
+    # Step 2: POST SSML to {region}.tts.speech.microsoft.com
+    # Step 3: Return base64 data URL string (data:audio/mp3;base64,...)
 
-        return mock_text_to_speech()
-    raise NotImplementedError(
-        "See docs/labs/05-language.md — Layer 4. "
-        "Hint: import httpx, base64 — POST SSML to {region}.tts.speech.microsoft.com"
-    )
+    ### YOUR CODE ENDS HERE ###
+
+    raise NotImplementedError("See docs/labs/05-language.md — Layer 4")

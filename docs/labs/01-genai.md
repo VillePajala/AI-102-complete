@@ -141,7 +141,7 @@ Restart the backend server after editing `.env`.
 <!-- section:layer:1 -->
 ## Layer 1: Chat Completion
 
-- Implement `_get_client()` helper function
+- Create an AzureOpenAI client inline
 - Implement `chat_completion()` function
 - Test via frontend or Swagger UI
 
@@ -168,23 +168,13 @@ The Chat Completions API is message-based. You send a list of message objects, e
 
 Open `backend/app/services/openai_service.py`. You need to do two things:
 
-**Step 1: Create a helper function `_get_client()`**
-
-Write a private function that returns an `AzureOpenAI` client instance. It should:
-
-- Import `AzureOpenAI` from the `openai` package
-- Check that `settings.AZURE_OPENAI_ENDPOINT` and `settings.AZURE_OPENAI_KEY` are not empty — raise `RuntimeError` with a descriptive message if they are missing
-- Create and return an `AzureOpenAI` instance using the endpoint, key, and API version from `settings`
-
-Place this function above `chat_completion()`, after the existing imports.
-
-<checkpoint id="l1-get-client"></checkpoint>
-
-**Step 2: Implement `chat_completion()`**
+**Step 1: Implement `chat_completion()`**
 
 Replace the `raise NotImplementedError(...)` line. Your implementation should:
 
-- Call `_get_client()` to get a client instance
+- Import `AzureOpenAI` from the `openai` package
+- Check that `settings.AZURE_OPENAI_ENDPOINT` and `settings.AZURE_OPENAI_KEY` are not empty — raise `RuntimeError` with a descriptive message if they are missing
+- Create an `AzureOpenAI` client inline using the endpoint, key, and API version from `settings`
 - Determine which deployment to use: use the `model` parameter if provided, otherwise fall back to `settings.AZURE_OPENAI_DEPLOYMENT`
 - Call `client.chat.completions.create()` with the deployment name and the `messages` list
 - For now, you can ignore the other parameters (temperature, top_p, etc.) — Layer 2 covers those
@@ -198,26 +188,15 @@ Replace the `raise NotImplementedError(...)` line. Your implementation should:
 ```python
 from openai import AzureOpenAI
 
-def _get_client() -> AzureOpenAI:
+def chat_completion(messages, model=None, temperature=0.7, top_p=1.0,
+                    max_tokens=800, frequency_penalty=0.0, presence_penalty=0.0):
     if not settings.AZURE_OPENAI_ENDPOINT or not ___:
         raise RuntimeError("Azure OpenAI not configured. Set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_KEY.")
-    return AzureOpenAI(
+    client = AzureOpenAI(
         azure_endpoint=___,
         api_key=___,
         api_version=___,
     )
-
-
-def chat_completion(
-    messages: list[dict],
-    model: str | None = None,
-    temperature: float = 0.7,
-    top_p: float = 1.0,
-    max_tokens: int = 800,
-    frequency_penalty: float = 0.0,
-    presence_penalty: float = 0.0,
-) -> str:
-    client = ___
     deployment = model if model else ___
     response = client.chat.completions.create(
         model=___,
@@ -256,47 +235,34 @@ You can also test directly via Swagger UI at http://localhost:8000/docs — find
 
 <details><summary>Full Solution</summary>
 
-Add this import at the top of the file (after the existing imports):
+Add the import and replace the `raise NotImplementedError(...)` in `chat_completion` with:
 
 ```python
 from openai import AzureOpenAI
-```
 
-Add the `_get_client` helper function before `chat_completion`:
+def chat_completion(messages, model=None, temperature=0.7, top_p=1.0,
+                    max_tokens=800, frequency_penalty=0.0, presence_penalty=0.0):
 
-```python
-def _get_client() -> AzureOpenAI:
+    ### YOUR CODE STARTS HERE ###
+
     if not settings.AZURE_OPENAI_ENDPOINT or not settings.AZURE_OPENAI_KEY:
         raise RuntimeError(
             "Azure OpenAI not configured. "
             "Set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_KEY."
         )
-    return AzureOpenAI(
+    client = AzureOpenAI(
         azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
         api_key=settings.AZURE_OPENAI_KEY,
         api_version=settings.AZURE_OPENAI_API_VERSION,
     )
-```
-
-Replace the body of `chat_completion`:
-
-```python
-def chat_completion(
-    messages: list[dict],
-    model: str | None = None,
-    temperature: float = 0.7,
-    top_p: float = 1.0,
-    max_tokens: int = 800,
-    frequency_penalty: float = 0.0,
-    presence_penalty: float = 0.0,
-) -> str:
-    client = _get_client()
     deployment = model if model else settings.AZURE_OPENAI_DEPLOYMENT
     response = client.chat.completions.create(
         model=deployment,
         messages=messages,
     )
     return response.choices[0].message.content or ""
+
+    ### YOUR CODE ENDS HERE ###
 ```
 
 Note: This minimal version does not pass the tuning parameters yet. That is Layer 2.
@@ -392,16 +358,23 @@ You can also test via Swagger UI by adding parameters to the request body:
 The complete `chat_completion` function with all parameters passed through:
 
 ```python
-def chat_completion(
-    messages: list[dict],
-    model: str | None = None,
-    temperature: float = 0.7,
-    top_p: float = 1.0,
-    max_tokens: int = 800,
-    frequency_penalty: float = 0.0,
-    presence_penalty: float = 0.0,
-) -> str:
-    client = _get_client()
+from openai import AzureOpenAI
+
+def chat_completion(messages, model=None, temperature=0.7, top_p=1.0,
+                    max_tokens=800, frequency_penalty=0.0, presence_penalty=0.0):
+
+    ### YOUR CODE STARTS HERE ###
+
+    if not settings.AZURE_OPENAI_ENDPOINT or not settings.AZURE_OPENAI_KEY:
+        raise RuntimeError(
+            "Azure OpenAI not configured. "
+            "Set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_KEY."
+        )
+    client = AzureOpenAI(
+        azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+        api_key=settings.AZURE_OPENAI_KEY,
+        api_version=settings.AZURE_OPENAI_API_VERSION,
+    )
     deployment = model if model else settings.AZURE_OPENAI_DEPLOYMENT
     response = client.chat.completions.create(
         model=deployment,
@@ -413,6 +386,8 @@ def chat_completion(
         presence_penalty=presence_penalty,
     )
     return response.choices[0].message.content or ""
+
+    ### YOUR CODE ENDS HERE ###
 ```
 
 </details>
@@ -456,7 +431,7 @@ The generated image URL is temporary — Azure hosts it for a limited time. If y
 
 Open `backend/app/services/openai_service.py` and find the `generate_image()` function. Replace the `raise NotImplementedError(...)` line with an implementation that:
 
-1. Gets an `AzureOpenAI` client using your `_get_client()` helper
+1. Creates an `AzureOpenAI` client inline (same pattern as `chat_completion()`)
 2. Calls `client.images.generate()` with:
    - `model` set to the DALL-E deployment name from settings
    - `prompt` set to the input prompt
@@ -470,8 +445,14 @@ Open `backend/app/services/openai_service.py` and find the `generate_image()` fu
 <details><summary>Hint — skeleton code</summary>
 
 ```python
-def generate_image(prompt: str) -> str:
-    client = _get_client()
+from openai import AzureOpenAI
+
+def generate_image(prompt):
+    client = AzureOpenAI(
+        azure_endpoint=___,
+        api_key=___,
+        api_version=___,
+    )
     response = client.images.generate(
         model=___,
         prompt=___,
@@ -513,8 +494,22 @@ The response will contain a `url` field with a link to the generated image.
 <details><summary>Full Solution</summary>
 
 ```python
-def generate_image(prompt: str) -> str:
-    client = _get_client()
+from openai import AzureOpenAI
+
+def generate_image(prompt):
+
+    ### YOUR CODE STARTS HERE ###
+
+    if not settings.AZURE_OPENAI_ENDPOINT or not settings.AZURE_OPENAI_KEY:
+        raise RuntimeError(
+            "Azure OpenAI not configured. "
+            "Set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_KEY."
+        )
+    client = AzureOpenAI(
+        azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+        api_key=settings.AZURE_OPENAI_KEY,
+        api_version=settings.AZURE_OPENAI_API_VERSION,
+    )
     response = client.images.generate(
         model=settings.AZURE_OPENAI_DALLE_DEPLOYMENT,
         prompt=prompt,
@@ -522,6 +517,8 @@ def generate_image(prompt: str) -> str:
         size="1024x1024",
     )
     return response.data[0].url or ""
+
+    ### YOUR CODE ENDS HERE ###
 ```
 
 </details>
@@ -546,7 +543,7 @@ Your `openai_service.py` should now have three implemented pieces:
 
 | Function | Status |
 |----------|--------|
-| `_get_client()` | Helper that creates an `AzureOpenAI` client |
+| Inline `AzureOpenAI(...)` | Client created at the start of each function |
 | `chat_completion()` | Sends messages with tuning parameters, returns response text |
 | `generate_image()` | Generates an image from a prompt, returns the image URL |
 | `chat_with_tools()` | Still raises `NotImplementedError` — implemented in [Lab 06](06-agents.md) |
@@ -554,38 +551,32 @@ Your `openai_service.py` should now have three implemented pieces:
 <details><summary>Complete openai_service.py (after Lab 01)</summary>
 
 ```python
-import logging
+# Azure OpenAI service — implement following docs/labs/01-genai.md
+# Quickstart: https://learn.microsoft.com/en-us/azure/ai-services/openai/quickstart
 
 from openai import AzureOpenAI
 
 from app.config import settings
 
-logger = logging.getLogger(__name__)
+
+# === LAYER 1: Chat Completion (Lab 01, Layer 1) ===
 
 
-def _get_client() -> AzureOpenAI:
+def chat_completion(messages, model=None, temperature=0.7, top_p=1.0,
+                    max_tokens=800, frequency_penalty=0.0, presence_penalty=0.0):
+
+    ### YOUR CODE STARTS HERE ###
+
     if not settings.AZURE_OPENAI_ENDPOINT or not settings.AZURE_OPENAI_KEY:
         raise RuntimeError(
             "Azure OpenAI not configured. "
             "Set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_KEY."
         )
-    return AzureOpenAI(
+    client = AzureOpenAI(
         azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
         api_key=settings.AZURE_OPENAI_KEY,
         api_version=settings.AZURE_OPENAI_API_VERSION,
     )
-
-
-def chat_completion(
-    messages: list[dict],
-    model: str | None = None,
-    temperature: float = 0.7,
-    top_p: float = 1.0,
-    max_tokens: int = 800,
-    frequency_penalty: float = 0.0,
-    presence_penalty: float = 0.0,
-) -> str:
-    client = _get_client()
     deployment = model if model else settings.AZURE_OPENAI_DEPLOYMENT
     response = client.chat.completions.create(
         model=deployment,
@@ -598,9 +589,26 @@ def chat_completion(
     )
     return response.choices[0].message.content or ""
 
+    ### YOUR CODE ENDS HERE ###
 
-def generate_image(prompt: str) -> str:
-    client = _get_client()
+
+# === LAYER 3: Image Generation with DALL-E (Lab 01, Layer 3) ===
+
+
+def generate_image(prompt):
+
+    ### YOUR CODE STARTS HERE ###
+
+    if not settings.AZURE_OPENAI_ENDPOINT or not settings.AZURE_OPENAI_KEY:
+        raise RuntimeError(
+            "Azure OpenAI not configured. "
+            "Set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_KEY."
+        )
+    client = AzureOpenAI(
+        azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+        api_key=settings.AZURE_OPENAI_KEY,
+        api_version=settings.AZURE_OPENAI_API_VERSION,
+    )
     response = client.images.generate(
         model=settings.AZURE_OPENAI_DALLE_DEPLOYMENT,
         prompt=prompt,
@@ -609,13 +617,23 @@ def generate_image(prompt: str) -> str:
     )
     return response.data[0].url or ""
 
+    ### YOUR CODE ENDS HERE ###
 
-# chat_with_tools() — not yet implemented (Lab 06)
-def chat_with_tools(
-    messages: list[dict],
-    system_instructions: str,
-    tools: list[str],
-) -> dict:
+
+# === LAYER 4: Tool-Augmented Chat (Lab 06, Layer 1) ===
+
+
+def chat_with_tools(messages, system_instructions, tools):
+
+    ### YOUR CODE STARTS HERE ###
+
+    # Step 1: Create an AzureOpenAI client inline
+    # Step 2: Add system_instructions as a system message
+    # Step 3: Call client.chat.completions.create()
+    # Step 4: Return dict with "message" (str) and "tool_calls" (list)
+
+    ### YOUR CODE ENDS HERE ###
+
     raise NotImplementedError("See docs/labs/06-agents.md — Layer 1")
 ```
 
@@ -694,18 +712,15 @@ Open `backend/app/routers/generative.py` and add a new endpoint `POST /api/gener
 **Service function (`openai_service.py`):**
 
 ```python
-from collections.abc import Generator
+from openai import AzureOpenAI
 
-def chat_completion_stream(
-    messages: list[dict],
-    model: str | None = None,
-    temperature: float = 0.7,
-    top_p: float = 1.0,
-    max_tokens: int = 800,
-    frequency_penalty: float = 0.0,
-    presence_penalty: float = 0.0,
-) -> Generator[str, None, None]:
-    client = _get_client()
+def chat_completion_stream(messages, model=None, temperature=0.7, top_p=1.0,
+                           max_tokens=800, frequency_penalty=0.0, presence_penalty=0.0):
+    client = AzureOpenAI(
+        azure_endpoint=___,
+        api_key=___,
+        api_version=___,
+    )
     deployment = model if model else settings.AZURE_OPENAI_DEPLOYMENT
     stream = client.chat.completions.create(
         model=___,
@@ -772,19 +787,20 @@ async def chat_stream(req: ChatRequest):
 **Add to `openai_service.py`** (after `chat_completion`):
 
 ```python
-from collections.abc import Generator
+from openai import AzureOpenAI
 
-
-def chat_completion_stream(
-    messages: list[dict],
-    model: str | None = None,
-    temperature: float = 0.7,
-    top_p: float = 1.0,
-    max_tokens: int = 800,
-    frequency_penalty: float = 0.0,
-    presence_penalty: float = 0.0,
-) -> Generator[str, None, None]:
-    client = _get_client()
+def chat_completion_stream(messages, model=None, temperature=0.7, top_p=1.0,
+                           max_tokens=800, frequency_penalty=0.0, presence_penalty=0.0):
+    if not settings.AZURE_OPENAI_ENDPOINT or not settings.AZURE_OPENAI_KEY:
+        raise RuntimeError(
+            "Azure OpenAI not configured. "
+            "Set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_KEY."
+        )
+    client = AzureOpenAI(
+        azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+        api_key=settings.AZURE_OPENAI_KEY,
+        api_version=settings.AZURE_OPENAI_API_VERSION,
+    )
     deployment = model if model else settings.AZURE_OPENAI_DEPLOYMENT
     stream = client.chat.completions.create(
         model=deployment,
@@ -924,7 +940,7 @@ Modify `chat_completion()` (or create a new `chat_completion_with_usage()` varia
 ```python
 import tiktoken
 
-def count_tokens(messages: list[dict], model: str = "gpt-4o-mini") -> int:
+def count_tokens(messages, model="gpt-4o-mini"):
     try:
         encoding = tiktoken.encoding_for_model(___)
     except KeyError:
@@ -952,12 +968,13 @@ PRICING = {
     "gpt-35-turbo": {"input": 1.50, "output": 2.00},
 }
 
-def chat_completion_with_usage(
-    messages: list[dict],
-    model: str | None = None,
-    # ... same params as chat_completion
-) -> dict:
-    client = _get_client()
+def chat_completion_with_usage(messages, model=None, temperature=0.7, top_p=1.0,
+                               max_tokens=800, frequency_penalty=0.0, presence_penalty=0.0):
+    client = AzureOpenAI(
+        azure_endpoint=___,
+        api_key=___,
+        api_version=___,
+    )
     deployment = model if model else settings.AZURE_OPENAI_DEPLOYMENT
     response = client.chat.completions.create(
         model=___,
@@ -1014,8 +1031,7 @@ PRICING_PER_MILLION = {
 }
 
 
-def count_tokens(messages: list[dict], model: str = "gpt-4o-mini") -> int:
-    """Count the number of tokens in a list of messages using tiktoken."""
+def count_tokens(messages, model="gpt-4o-mini"):
     try:
         encoding = tiktoken.encoding_for_model(model)
     except KeyError:
@@ -1028,22 +1044,23 @@ def count_tokens(messages: list[dict], model: str = "gpt-4o-mini") -> int:
         for key, value in message.items():
             num_tokens += len(encoding.encode(value))
             if key == "name":
-                num_tokens += 1  # name field costs an extra token
+                num_tokens += 1
     num_tokens += 3  # assistant reply priming
     return num_tokens
 
 
-def chat_completion_with_usage(
-    messages: list[dict],
-    model: str | None = None,
-    temperature: float = 0.7,
-    top_p: float = 1.0,
-    max_tokens: int = 800,
-    frequency_penalty: float = 0.0,
-    presence_penalty: float = 0.0,
-) -> dict:
-    """Chat completion that returns content, token usage, and estimated cost."""
-    client = _get_client()
+def chat_completion_with_usage(messages, model=None, temperature=0.7, top_p=1.0,
+                               max_tokens=800, frequency_penalty=0.0, presence_penalty=0.0):
+    if not settings.AZURE_OPENAI_ENDPOINT or not settings.AZURE_OPENAI_KEY:
+        raise RuntimeError(
+            "Azure OpenAI not configured. "
+            "Set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_KEY."
+        )
+    client = AzureOpenAI(
+        azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+        api_key=settings.AZURE_OPENAI_KEY,
+        api_version=settings.AZURE_OPENAI_API_VERSION,
+    )
     deployment = model if model else settings.AZURE_OPENAI_DEPLOYMENT
     response = client.chat.completions.create(
         model=deployment,
@@ -1316,7 +1333,7 @@ D) `1024x1792`
 
 | Concept | How You Used It | Exam Relevance |
 |---------|----------------|----------------|
-| `AzureOpenAI` client creation | `_get_client()` with endpoint, key, API version | Core setup question type |
+| `AzureOpenAI` client creation | Inline `AzureOpenAI(...)` with endpoint, key, API version | Core setup question type |
 | Chat Completions API | `client.chat.completions.create()` with messages | Most common API on the exam |
 | Deployment vs. model names | `model` parameter = deployment name | Frequent exam distractor |
 | Parameter tuning | temperature, top_p, max_tokens, penalties | "Choose the right parameter" questions |

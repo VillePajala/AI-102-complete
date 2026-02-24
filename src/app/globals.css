@@ -196,6 +196,35 @@
   background: oklch(0.45 0.01 280 / 65%);
 }
 
+/* Lab guide — styled <details>/<summary> (hints & solutions) */
+.lab-guide-prose details {
+  margin: 1.25rem 0;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.lab-guide-prose details summary {
+  padding: 0.625rem 1rem;
+  font-weight: 600;
+  font-size: 0.9em;
+  cursor: pointer;
+  background: color-mix(in oklch, var(--muted) 40%, transparent);
+  user-select: none;
+}
+
+.lab-guide-prose details summary:hover {
+  background: color-mix(in oklch, var(--muted) 60%, transparent);
+}
+
+.lab-guide-prose details[open] summary {
+  border-bottom: 1px solid var(--border);
+}
+
+.lab-guide-prose details > :not(summary) {
+  padding: 0 1rem;
+}
+
 /* Shimmer animation for progress bars */
 @keyframes shimmer {
   0% { transform: translateX(-100%); }

@@ -165,7 +165,7 @@ from azure.search.documents.indexes.models import (
 )
 from app.config import settings
 
-def create_index(index_name: str) -> None:
+def create_index(index_name):
     client = SearchIndexClient(
         endpoint=settings.AZURE_SEARCH_ENDPOINT,
         credential=AzureKeyCredential(settings.AZURE_SEARCH_KEY),
@@ -619,14 +619,10 @@ Enhance `search_documents()` to support optional filters and facets. This is a s
 <summary>Hint: Updated function signature</summary>
 
 ```python
-def search_documents(
-    query: str,
-    filter_expr: str | None = None,
-    facets: list[str] | None = None,
-) -> list[dict]:
+def search_documents(query, filter_expr=None, facets=None):
 ```
 
-Then pass these to `client.search()`:
+Your implementation code goes inside the `### YOUR CODE STARTS HERE ###` / `### YOUR CODE ENDS HERE ###` markers. Pass the new parameters to `client.search()`:
 
 ```python
 results = client.search(
@@ -680,12 +676,20 @@ Self-check questions for advanced queries:
 <summary>Full Solution</summary>
 
 ```python
-def search_documents(
-    query: str,
-    filter_expr: str | None = None,
-    facets: list[str] | None = None,
-) -> list[dict]:
-    client = _get_search_client()
+def search_documents(query, filter_expr=None, facets=None):
+
+    ### YOUR CODE STARTS HERE ###
+
+    # Step 1: Create a SearchClient
+    from azure.search.documents import SearchClient
+    from azure.core.credentials import AzureKeyCredential
+    client = SearchClient(
+        endpoint=settings.AZURE_SEARCH_ENDPOINT,
+        index_name=settings.AZURE_SEARCH_INDEX,
+        credential=AzureKeyCredential(settings.AZURE_SEARCH_KEY),
+    )
+
+    # Step 2: Call client.search() with filter, facets, top=10, highlight_fields="content"
     results = client.search(
         search_text=query,
         filter=filter_expr,
@@ -694,6 +698,8 @@ def search_documents(
         include_total_count=True,
         highlight_fields="content",
     )
+
+    # Step 3: Loop over results, build list of dicts with content, score, source, highlights
     items = []
     for result in results:
         item = {
@@ -712,10 +718,14 @@ def search_documents(
         if metadata:
             item["metadata"] = metadata
         items.append(item)
+
+    # Step 4: Return the list
     return items
+
+    ### YOUR CODE ENDS HERE ###
 ```
 
-This is the same function from Lab 02 Layer 3, with two additional optional parameters passed through to `client.search()`.
+This is the same function from Lab 02 Layer 3, with two additional optional parameters (`filter_expr`, `facets`) passed through to `client.search()`. Note the function signature has no type annotations (matching the service file pattern), and the `### YOUR CODE ###` markers are included.
 
 </details>
 
@@ -751,56 +761,84 @@ At this point you should understand:
 3. OData filter syntax
 4. The difference between simple and full Lucene query syntax
 
-<details><summary>Complete search_service.py (after Lab 03 — same as Lab 02, this lab is conceptual)</summary>
+<details><summary>Complete search_service.py (after Lab 03 — with filter/facet support from Layer 4)</summary>
 
-Lab 03 is primarily conceptual. The service file is the same as after Lab 02. If you enhanced `search_documents()` with filter or facet support in Layer 4, your version may differ.
+Lab 03 is primarily conceptual. The service file below shows `search_documents()` enhanced with optional `filter_expr` and `facets` parameters from Layer 4. The file follows the project pattern: no type annotations and `### YOUR CODE ###` markers with code filled in. Demo mode is handled centrally in `main.py` — service files have zero demo-related code.
 
 ```python
-import logging
-
-from azure.core.credentials import AzureKeyCredential
-from azure.search.documents import SearchClient
+# Azure AI Search service — implement following docs/labs/02-rag.md and docs/labs/03-knowledge-mining.md
+# Quickstart: https://learn.microsoft.com/en-us/azure/search/search-get-started-text
 
 from app.config import settings
 
-logger = logging.getLogger(__name__)
+
+# === LAYER 1: Document Upload (Lab 02, Layer 2) ===
+
+### YOUR CODE STARTS HERE ###
+
+# (No shared setup needed — each function creates its own client inline)
+
+### YOUR CODE ENDS HERE ###
 
 
-def _get_search_client() -> SearchClient:
-    if not settings.AZURE_SEARCH_ENDPOINT or not settings.AZURE_SEARCH_KEY:
-        raise RuntimeError(
-            "Azure AI Search not configured. "
-            "Set AZURE_SEARCH_ENDPOINT and AZURE_SEARCH_KEY."
-        )
-    return SearchClient(
+def upload_document(filename, content):
+
+    ### YOUR CODE STARTS HERE ###
+
+    # Step 1: Create a SearchClient
+    from azure.search.documents import SearchClient
+    from azure.core.credentials import AzureKeyCredential
+    client = SearchClient(
         endpoint=settings.AZURE_SEARCH_ENDPOINT,
         index_name=settings.AZURE_SEARCH_INDEX,
         credential=AzureKeyCredential(settings.AZURE_SEARCH_KEY),
     )
 
-
-def upload_document(filename: str, content: str) -> None:
-    client = _get_search_client()
+    # Step 2: Create a document dict with id, content, source, title fields
     doc = {
         "id": filename.replace(" ", "_").replace(".", "_"),
         "content": content,
         "source": filename,
         "title": filename,
     }
+
+    # Step 3: Call client.upload_documents(documents=[doc])
     client.upload_documents(documents=[doc])
 
+    ### YOUR CODE ENDS HERE ###
 
-def search_documents(query: str) -> list[dict]:
-    client = _get_search_client()
+
+# === LAYER 2: Search Query (Lab 02, Layer 3) ===
+# Enhanced with filter/facet support in Lab 03, Layer 4
+
+
+def search_documents(query, filter_expr=None, facets=None):
+
+    ### YOUR CODE STARTS HERE ###
+
+    # Step 1: Create a SearchClient
+    from azure.search.documents import SearchClient
+    from azure.core.credentials import AzureKeyCredential
+    client = SearchClient(
+        endpoint=settings.AZURE_SEARCH_ENDPOINT,
+        index_name=settings.AZURE_SEARCH_INDEX,
+        credential=AzureKeyCredential(settings.AZURE_SEARCH_KEY),
+    )
+
+    # Step 2: Call client.search() with filter, facets, top=10, highlight_fields="content"
     results = client.search(
         search_text=query,
+        filter=filter_expr,
+        facets=facets,
         top=10,
         include_total_count=True,
         highlight_fields="content",
     )
+
+    # Step 3: Loop over results, build list of dicts with content, score, source, highlights
     items = []
     for result in results:
-        item: dict = {
+        item = {
             "content": result.get("content", ""),
             "score": result.get("@search.score", 0.0),
         }
@@ -816,7 +854,11 @@ def search_documents(query: str) -> list[dict]:
         if metadata:
             item["metadata"] = metadata
         items.append(item)
+
+    # Step 4: Return the list
     return items
+
+    ### YOUR CODE ENDS HERE ###
 ```
 
 </details>

@@ -30,7 +30,7 @@ Agentic AI is a growing portion of the AI-102 exam. The exam tests your understa
 <!-- section:prerequisites -->
 ## Prerequisites
 
-- **Lab 01 must be completed** — `chat_completion()` and the `_get_client()` helper must already work in `openai_service.py`
+- **Lab 01 must be completed** — `chat_completion()` must already work in `openai_service.py`
 - Azure OpenAI resource with a GPT deployment (same one from Lab 01)
 - Both frontend and backend servers running
 
@@ -116,7 +116,7 @@ The format you should instruct the model to use when it would invoke a tool:
 
 **Step 2: Call the Chat Completions API**
 
-- Use `_get_client()` to get your existing Azure OpenAI client
+- Create an AzureOpenAI client inline using `settings.AZURE_OPENAI_ENDPOINT`, `settings.AZURE_OPENAI_KEY`, and `settings.AZURE_OPENAI_API_VERSION`
 - Call `client.chat.completions.create()` with the system message prepended to the user's messages
 - Use `settings.AZURE_OPENAI_DEPLOYMENT` as the model
 - Set `temperature=0.7` and `max_tokens=1000`
@@ -132,12 +132,13 @@ For Layer 1, return a dict with `"message"` set to the response content and `"to
 <details><summary>Hint</summary>
 
 ```python
-def chat_with_tools(
-    messages: list[dict],
-    system_instructions: str,
-    tools: list[str],
-) -> dict:
-    client = _get_client()
+def chat_with_tools(messages, system_instructions, tools):
+    from openai import AzureOpenAI
+    client = AzureOpenAI(
+        azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+        api_key=settings.AZURE_OPENAI_KEY,
+        api_version=settings.AZURE_OPENAI_API_VERSION,
+    )
     deployment = settings.AZURE_OPENAI_DEPLOYMENT
 
     system_msg = {
@@ -199,12 +200,13 @@ The response should contain a message that references the tools, possibly using 
 <details><summary>Full Solution</summary>
 
 ```python
-def chat_with_tools(
-    messages: list[dict],
-    system_instructions: str,
-    tools: list[str],
-) -> dict:
-    client = _get_client()
+def chat_with_tools(messages, system_instructions, tools):
+    from openai import AzureOpenAI
+    client = AzureOpenAI(
+        azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+        api_key=settings.AZURE_OPENAI_KEY,
+        api_version=settings.AZURE_OPENAI_API_VERSION,
+    )
     deployment = settings.AZURE_OPENAI_DEPLOYMENT
 
     system_msg = {
@@ -383,12 +385,13 @@ The exact wording will vary since GPT generates the tool usage descriptions, but
 The complete `chat_with_tools` function with both Layer 1 and Layer 2:
 
 ```python
-def chat_with_tools(
-    messages: list[dict],
-    system_instructions: str,
-    tools: list[str],
-) -> dict:
-    client = _get_client()
+def chat_with_tools(messages, system_instructions, tools):
+    from openai import AzureOpenAI
+    client = AzureOpenAI(
+        azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+        api_key=settings.AZURE_OPENAI_KEY,
+        api_version=settings.AZURE_OPENAI_API_VERSION,
+    )
     deployment = settings.AZURE_OPENAI_DEPLOYMENT
 
     system_msg = {
@@ -551,49 +554,38 @@ After completing all three layers, verify everything works:
 - **Clean content is separated**: The conversational response does not contain raw `[TOOL: ...]` markup
 - **No errors in backend terminal**: The uvicorn output should show 200 status codes for `/api/agents/chat`
 
-Your `openai_service.py` should now have four implemented pieces:
+Your `openai_service.py` should now have three implemented functions:
 
-1. `_get_client()` — helper that creates an `AzureOpenAI` client (from Lab 01)
-2. `chat_completion()` — sends messages with tuning parameters (from Lab 01)
-3. `generate_image()` — generates images with DALL-E (from Lab 01)
-4. `chat_with_tools()` — agent chat with system instructions and tool call parsing (this lab)
+1. `chat_completion()` — sends messages with tuning parameters (from Lab 01)
+2. `generate_image()` — generates images with DALL-E (from Lab 01)
+3. `chat_with_tools()` — agent chat with system instructions and tool call parsing (this lab)
 
 <details><summary>Complete openai_service.py (after Lab 06 — all functions implemented)</summary>
 
 ```python
-import logging
+# Azure OpenAI service — implement following docs/labs/01-genai.md
+# Quickstart: https://learn.microsoft.com/en-us/azure/ai-services/openai/quickstart
+
 import re
 
 from openai import AzureOpenAI
 
 from app.config import settings
 
-logger = logging.getLogger(__name__)
+
+# === LAYER 1: Chat Completion (Lab 01, Layer 1) ===
 
 
-def _get_client() -> AzureOpenAI:
-    if not settings.AZURE_OPENAI_ENDPOINT or not settings.AZURE_OPENAI_KEY:
-        raise RuntimeError(
-            "Azure OpenAI not configured. "
-            "Set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_KEY."
-        )
-    return AzureOpenAI(
+def chat_completion(messages, model=None, temperature=0.7, top_p=1.0,
+                    max_tokens=800, frequency_penalty=0.0, presence_penalty=0.0):
+
+    ### YOUR CODE STARTS HERE ###
+
+    client = AzureOpenAI(
         azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
         api_key=settings.AZURE_OPENAI_KEY,
         api_version=settings.AZURE_OPENAI_API_VERSION,
     )
-
-
-def chat_completion(
-    messages: list[dict],
-    model: str | None = None,
-    temperature: float = 0.7,
-    top_p: float = 1.0,
-    max_tokens: int = 800,
-    frequency_penalty: float = 0.0,
-    presence_penalty: float = 0.0,
-) -> str:
-    client = _get_client()
     deployment = model if model else settings.AZURE_OPENAI_DEPLOYMENT
     response = client.chat.completions.create(
         model=deployment,
@@ -606,9 +598,25 @@ def chat_completion(
     )
     return response.choices[0].message.content or ""
 
+    ### YOUR CODE ENDS HERE ###
 
-def generate_image(prompt: str) -> str:
-    client = _get_client()
+
+# === LAYER 2: Parameter Tuning (Lab 01, Layer 2) ===
+# No new function — enhance chat_completion() to pass all parameters.
+
+
+# === LAYER 3: Image Generation with DALL-E (Lab 01, Layer 3) ===
+
+
+def generate_image(prompt):
+
+    ### YOUR CODE STARTS HERE ###
+
+    client = AzureOpenAI(
+        azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+        api_key=settings.AZURE_OPENAI_KEY,
+        api_version=settings.AZURE_OPENAI_API_VERSION,
+    )
     response = client.images.generate(
         model=settings.AZURE_OPENAI_DALLE_DEPLOYMENT,
         prompt=prompt,
@@ -617,13 +625,20 @@ def generate_image(prompt: str) -> str:
     )
     return response.data[0].url or ""
 
+    ### YOUR CODE ENDS HERE ###
 
-def chat_with_tools(
-    messages: list[dict],
-    system_instructions: str,
-    tools: list[str],
-) -> dict:
-    client = _get_client()
+
+# === LAYER 4: Tool-Augmented Chat (Lab 06, Layer 1) ===
+
+
+def chat_with_tools(messages, system_instructions, tools):
+    ### YOUR CODE STARTS HERE ###
+
+    client = AzureOpenAI(
+        azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+        api_key=settings.AZURE_OPENAI_KEY,
+        api_version=settings.AZURE_OPENAI_API_VERSION,
+    )
     deployment = settings.AZURE_OPENAI_DEPLOYMENT
 
     system_msg = {
@@ -665,6 +680,8 @@ def chat_with_tools(
         clean_content = content
 
     return {"message": clean_content, "tool_calls": tool_calls}
+
+    ### YOUR CODE ENDS HERE ###
 ```
 
 </details>
@@ -816,11 +833,13 @@ Check if `response.choices[0].message.tool_calls` is not empty. If the model wan
 ```python
 import json
 
-def chat_with_native_tools(
-    messages: list[dict],
-    system_instructions: str,
-) -> dict:
-    client = _get_client()
+def chat_with_native_tools(messages, system_instructions):
+    from openai import AzureOpenAI
+    client = AzureOpenAI(
+        azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+        api_key=settings.AZURE_OPENAI_KEY,
+        api_version=settings.AZURE_OPENAI_API_VERSION,
+    )
     deployment = settings.AZURE_OPENAI_DEPLOYMENT
 
     tools = [
@@ -902,11 +921,13 @@ If function calling works correctly, the response should indicate that `get_weat
 ```python
 import json
 
-def chat_with_native_tools(
-    messages: list[dict],
-    system_instructions: str,
-) -> dict:
-    client = _get_client()
+def chat_with_native_tools(messages, system_instructions):
+    from openai import AzureOpenAI
+    client = AzureOpenAI(
+        azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+        api_key=settings.AZURE_OPENAI_KEY,
+        api_version=settings.AZURE_OPENAI_API_VERSION,
+    )
     deployment = settings.AZURE_OPENAI_DEPLOYMENT
 
     tools = [
@@ -949,7 +970,7 @@ def chat_with_native_tools(
     ]
 
     # Simulated function implementations
-    def execute_tool(name: str, args: dict) -> str:
+    def execute_tool(name, args):
         if name == "get_weather":
             city = args.get("city", "Unknown")
             units = args.get("units", "celsius")
@@ -976,7 +997,7 @@ def chat_with_native_tools(
                     ast.USub: operator.neg,
                 }
 
-                def _safe_eval(node: ast.AST) -> float:
+                def _safe_eval(node):
                     if isinstance(node, ast.Expression):
                         return _safe_eval(node.body)
                     elif isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):

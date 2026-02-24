@@ -102,8 +102,7 @@ Restart the backend server after updating `.env`.
 ## Layer 1: Sentiment Analysis
 
 - Add SDK imports to `language_service.py`
-- Implement `_get_text_client()` helper
-- Implement `analyze_text()` with sentiment analysis
+- Implement `analyze_text()` with inline client creation and sentiment analysis
 - Test via frontend or Swagger UI
 
 ### What You Will Learn
@@ -131,12 +130,8 @@ The SDK returns a response list. Index `[0]` gives the result for your single do
 
 <checkpoint id="l1-imports"></checkpoint>
 
-3. Write a helper function `_get_text_client()` that creates and returns a `TextAnalyticsClient`. Check that the endpoint and key are configured.
-
-<checkpoint id="l1-get-client"></checkpoint>
-
-4. Start implementing `analyze_text()`:
-   - Call `_get_text_client()`.
+3. Start implementing `analyze_text()`:
+   - Create a `TextAnalyticsClient` inline using `settings.AZURE_AI_SERVICES_ENDPOINT` and `AzureKeyCredential(settings.AZURE_AI_SERVICES_KEY)`. Check that the endpoint and key are configured before creating the client.
    - Wrap the input text in a list: `documents = [text]`.
    - If `analysis_type` is `"sentiment"` or `"all"`, call `client.analyze_sentiment(documents=documents)` and take the first result.
    - Check `.is_error`. If not an error, build a dict: `{"sentiment": {"label": ..., "scores": {"positive": ..., "neutral": ..., "negative": ...}}}`.
@@ -150,13 +145,12 @@ The SDK returns a response list. Index `[0]` gives the result for your single do
 from azure.ai.textanalytics import TextAnalyticsClient
 from azure.core.credentials import AzureKeyCredential
 
-def _get_text_client() -> TextAnalyticsClient:
-    # Check settings.AZURE_AI_SERVICES_ENDPOINT and settings.AZURE_AI_SERVICES_KEY
-    # Return TextAnalyticsClient(endpoint=..., credential=AzureKeyCredential(...))
-    ...
 
-def analyze_text(text: str, analysis_type: str = "all") -> dict:
-    client = _get_text_client()
+def analyze_text(text, analysis_type="all"):
+    client = TextAnalyticsClient(
+        endpoint=settings.AZURE_AI_SERVICES_ENDPOINT,
+        credential=AzureKeyCredential(settings.AZURE_AI_SERVICES_KEY),
+    )
     documents = [text]
     result = {}
 
@@ -189,30 +183,30 @@ def analyze_text(text: str, analysis_type: str = "all") -> dict:
 <details><summary>Full Solution</summary>
 
 ```python
-import logging
+from app.config import settings
+
+# === LAYER 1: Sentiment Analysis (Lab 05, Layer 1) ===
+
+### YOUR CODE STARTS HERE ###
 
 from azure.ai.textanalytics import TextAnalyticsClient
 from azure.core.credentials import AzureKeyCredential
 
-from app.config import settings
-
-logger = logging.getLogger(__name__)
+### YOUR CODE ENDS HERE ###
 
 
-def _get_text_client() -> TextAnalyticsClient:
+def analyze_text(text, analysis_type="all"):
+    ### YOUR CODE STARTS HERE ###
+
     if not settings.AZURE_AI_SERVICES_ENDPOINT or not settings.AZURE_AI_SERVICES_KEY:
         raise RuntimeError(
             "Azure AI Services not configured. "
             "Set AZURE_AI_SERVICES_ENDPOINT and AZURE_AI_SERVICES_KEY."
         )
-    return TextAnalyticsClient(
+    client = TextAnalyticsClient(
         endpoint=settings.AZURE_AI_SERVICES_ENDPOINT,
         credential=AzureKeyCredential(settings.AZURE_AI_SERVICES_KEY),
     )
-
-
-def analyze_text(text: str, analysis_type: str = "all") -> dict:
-    client = _get_text_client()
     documents = [text]
     result = {}
 
@@ -229,6 +223,8 @@ def analyze_text(text: str, analysis_type: str = "all") -> dict:
             }
 
     return result
+
+    ### YOUR CODE ENDS HERE ###
 ```
 
 </details>
@@ -328,8 +324,21 @@ if analysis_type in ("all", "entities"):
 <details><summary>Full Solution</summary>
 
 ```python
-def analyze_text(text: str, analysis_type: str = "all") -> dict:
-    client = _get_text_client()
+def analyze_text(text, analysis_type="all"):
+    ### YOUR CODE STARTS HERE ###
+
+    from azure.ai.textanalytics import TextAnalyticsClient
+    from azure.core.credentials import AzureKeyCredential
+
+    if not settings.AZURE_AI_SERVICES_ENDPOINT or not settings.AZURE_AI_SERVICES_KEY:
+        raise RuntimeError(
+            "Azure AI Services not configured. "
+            "Set AZURE_AI_SERVICES_ENDPOINT and AZURE_AI_SERVICES_KEY."
+        )
+    client = TextAnalyticsClient(
+        endpoint=settings.AZURE_AI_SERVICES_ENDPOINT,
+        credential=AzureKeyCredential(settings.AZURE_AI_SERVICES_KEY),
+    )
     documents = [text]
     result = {}
 
@@ -380,6 +389,8 @@ def analyze_text(text: str, analysis_type: str = "all") -> dict:
             }
 
     return result
+
+    ### YOUR CODE ENDS HERE ###
 ```
 
 </details>
@@ -439,7 +450,8 @@ We use the `httpx` library for HTTP calls because it supports both sync and asyn
 import uuid
 import httpx
 
-def translate_text(text: str, source: str, target: str) -> str:
+
+def translate_text(text, source, target):
     key = settings.AZURE_TRANSLATOR_KEY or settings.AZURE_AI_SERVICES_KEY
     region = settings.AZURE_TRANSLATOR_REGION or settings.AZURE_SPEECH_REGION
     if not key:
@@ -483,11 +495,12 @@ def translate_text(text: str, source: str, target: str) -> str:
 <details><summary>Full Solution</summary>
 
 ```python
-import uuid
-import httpx
+def translate_text(text, source, target):
+    ### YOUR CODE STARTS HERE ###
 
+    import uuid
+    import httpx
 
-def translate_text(text: str, source: str, target: str) -> str:
     key = settings.AZURE_TRANSLATOR_KEY or settings.AZURE_AI_SERVICES_KEY
     region = settings.AZURE_TRANSLATOR_REGION or settings.AZURE_SPEECH_REGION
     if not key:
@@ -513,6 +526,8 @@ def translate_text(text: str, source: str, target: str) -> str:
     response.raise_for_status()
     data = response.json()
     return data[0]["translations"][0]["text"]
+
+    ### YOUR CODE ENDS HERE ###
 ```
 
 </details>
@@ -580,7 +595,8 @@ The `X-Microsoft-OutputFormat` header controls the audio format for TTS. Common 
 import base64
 import httpx
 
-def speech_to_text(audio_bytes: bytes) -> str:
+
+def speech_to_text(audio_bytes):
     region = settings.AZURE_SPEECH_REGION
     url = f"https://{region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1"
     headers = {
@@ -593,7 +609,8 @@ def speech_to_text(audio_bytes: bytes) -> str:
     response.raise_for_status()
     return response.json().get("DisplayText", "")
 
-def text_to_speech(text: str) -> str:
+
+def text_to_speech(text):
     region = settings.AZURE_SPEECH_REGION
     url = f"https://{region}.tts.speech.microsoft.com/cognitiveservices/v1"
     headers = {
@@ -630,299 +647,11 @@ def text_to_speech(text: str) -> str:
 <details><summary>Full Solution</summary>
 
 ```python
-import base64
-import logging
-import uuid
+def speech_to_text(audio_bytes):
+    ### YOUR CODE STARTS HERE ###
 
-import httpx
-from azure.ai.textanalytics import TextAnalyticsClient
-from azure.core.credentials import AzureKeyCredential
+    import httpx
 
-from app.config import settings
-
-logger = logging.getLogger(__name__)
-
-
-def _get_text_client() -> TextAnalyticsClient:
-    if not settings.AZURE_AI_SERVICES_ENDPOINT or not settings.AZURE_AI_SERVICES_KEY:
-        raise RuntimeError(
-            "Azure AI Services not configured. "
-            "Set AZURE_AI_SERVICES_ENDPOINT and AZURE_AI_SERVICES_KEY."
-        )
-    return TextAnalyticsClient(
-        endpoint=settings.AZURE_AI_SERVICES_ENDPOINT,
-        credential=AzureKeyCredential(settings.AZURE_AI_SERVICES_KEY),
-    )
-
-
-def analyze_text(text: str, analysis_type: str = "all") -> dict:
-    client = _get_text_client()
-    documents = [text]
-    result = {}
-
-    if analysis_type in ("all", "sentiment"):
-        response = client.analyze_sentiment(documents=documents)[0]
-        if not response.is_error:
-            result["sentiment"] = {
-                "label": response.sentiment,
-                "scores": {
-                    "positive": response.confidence_scores.positive,
-                    "neutral": response.confidence_scores.neutral,
-                    "negative": response.confidence_scores.negative,
-                },
-            }
-
-    if analysis_type in ("all", "keyPhrases"):
-        response = client.extract_key_phrases(documents=documents)[0]
-        if not response.is_error:
-            result["keyPhrases"] = list(response.key_phrases)
-
-    if analysis_type in ("all", "entities"):
-        response = client.recognize_entities(documents=documents)[0]
-        if not response.is_error:
-            result["entities"] = [
-                {
-                    "text": entity.text,
-                    "category": entity.category,
-                    "confidence": entity.confidence_score,
-                }
-                for entity in response.entities
-            ]
-
-    if analysis_type in ("all", "pii"):
-        response = client.recognize_pii_entities(documents=documents)[0]
-        if not response.is_error:
-            result["piiEntities"] = [
-                {"text": entity.text, "category": entity.category}
-                for entity in response.entities
-            ]
-
-    if analysis_type in ("all", "language"):
-        response = client.detect_language(documents=documents)[0]
-        if not response.is_error:
-            result["language"] = {
-                "name": response.primary_language.name,
-                "iso": response.primary_language.iso6391_name,
-                "confidence": response.primary_language.confidence_score,
-            }
-
-    return result
-
-
-def translate_text(text: str, source: str, target: str) -> str:
-    key = settings.AZURE_TRANSLATOR_KEY or settings.AZURE_AI_SERVICES_KEY
-    region = settings.AZURE_TRANSLATOR_REGION or settings.AZURE_SPEECH_REGION
-    if not key:
-        raise RuntimeError(
-            "Azure Translator not configured. "
-            "Set AZURE_TRANSLATOR_KEY or AZURE_AI_SERVICES_KEY."
-        )
-    endpoint = "https://api.cognitive.microsofttranslator.com"
-    path = "/translate"
-    params = {"api-version": "3.0", "to": target}
-    if source and source != "auto":
-        params["from"] = source
-    headers = {
-        "Ocp-Apim-Subscription-Key": key,
-        "Ocp-Apim-Subscription-Region": region,
-        "Content-type": "application/json",
-        "X-ClientTraceId": str(uuid.uuid4()),
-    }
-    body = [{"text": text}]
-    response = httpx.post(
-        f"{endpoint}{path}", params=params, headers=headers, json=body, timeout=30
-    )
-    response.raise_for_status()
-    data = response.json()
-    return data[0]["translations"][0]["text"]
-
-
-def speech_to_text(audio_bytes: bytes) -> str:
-    if not settings.AZURE_SPEECH_KEY or not settings.AZURE_SPEECH_REGION:
-        raise RuntimeError(
-            "Azure Speech not configured. "
-            "Set AZURE_SPEECH_KEY and AZURE_SPEECH_REGION."
-        )
-    url = (
-        f"https://{settings.AZURE_SPEECH_REGION}.stt.speech.microsoft.com"
-        f"/speech/recognition/conversation/cognitiveservices/v1"
-    )
-    headers = {
-        "Ocp-Apim-Subscription-Key": settings.AZURE_SPEECH_KEY,
-        "Content-Type": "audio/wav",
-        "Accept": "application/json",
-    }
-    params = {"language": "en-US"}
-    response = httpx.post(
-        url, headers=headers, params=params, content=audio_bytes, timeout=30
-    )
-    response.raise_for_status()
-    data = response.json()
-    return data.get("DisplayText", "")
-
-
-def text_to_speech(text: str) -> str:
-    if not settings.AZURE_SPEECH_KEY or not settings.AZURE_SPEECH_REGION:
-        raise RuntimeError(
-            "Azure Speech not configured. "
-            "Set AZURE_SPEECH_KEY and AZURE_SPEECH_REGION."
-        )
-    url = (
-        f"https://{settings.AZURE_SPEECH_REGION}.tts.speech.microsoft.com"
-        f"/cognitiveservices/v1"
-    )
-    headers = {
-        "Ocp-Apim-Subscription-Key": settings.AZURE_SPEECH_KEY,
-        "Content-Type": "application/ssml+xml",
-        "X-Microsoft-OutputFormat": "audio-16khz-128kbitrate-mono-mp3",
-    }
-    ssml = (
-        '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">'
-        '<voice name="en-US-JennyNeural">'
-        f"{text}"
-        "</voice></speak>"
-    )
-    response = httpx.post(
-        url, headers=headers, content=ssml.encode("utf-8"), timeout=30
-    )
-    response.raise_for_status()
-    audio_b64 = base64.b64encode(response.content).decode("utf-8")
-    return f"data:audio/mp3;base64,{audio_b64}"
-```
-
-</details>
-
-### Exam Tips
-
-- The exam tests both the **Speech SDK** and the **REST API** approaches. The REST API does not require installing native libraries, which is why it is often used in web backends and containers. Know when to use each.
-- SSML is important for the exam. Know the basic structure: `<speak>` root with version and namespace, `<voice>` with a voice name, and text content. The exam may also test SSML features like `<prosody>` (speed/pitch), `<break>` (pauses), and `<phoneme>` (pronunciation).
-- The `X-Microsoft-OutputFormat` header determines audio quality and format. The exam may ask about choosing the right format for different scenarios (streaming vs. file download, bandwidth constraints).
-
----
-
-## Checkpoint
-
-After completing all four layers, your `language_service.py` should have:
-
-- A `_get_text_client()` helper that creates an authenticated `TextAnalyticsClient`
-- An `analyze_text()` function that handles sentiment, key phrases, entities, PII, and language detection based on the `analysis_type` parameter
-- A `translate_text()` function that calls the Translator REST API with proper authentication headers
-- A `speech_to_text()` function that sends WAV audio to the Speech STT REST API
-- A `text_to_speech()` function that sends SSML to the Speech TTS REST API and returns a base64 audio data URL
-
-Verify by testing all four endpoints through the frontend (`/language`) and the Swagger UI (`http://localhost:8000/docs`).
-
-<details><summary>Complete language_service.py</summary>
-
-```python
-import base64
-import logging
-import uuid
-
-import httpx
-from azure.ai.textanalytics import TextAnalyticsClient
-from azure.core.credentials import AzureKeyCredential
-
-from app.config import settings
-
-logger = logging.getLogger(__name__)
-
-
-def _get_text_client() -> TextAnalyticsClient:
-    if not settings.AZURE_AI_SERVICES_ENDPOINT or not settings.AZURE_AI_SERVICES_KEY:
-        raise RuntimeError(
-            "Azure AI Services not configured. "
-            "Set AZURE_AI_SERVICES_ENDPOINT and AZURE_AI_SERVICES_KEY."
-        )
-    return TextAnalyticsClient(
-        endpoint=settings.AZURE_AI_SERVICES_ENDPOINT,
-        credential=AzureKeyCredential(settings.AZURE_AI_SERVICES_KEY),
-    )
-
-
-def analyze_text(text: str, analysis_type: str = "all") -> dict:
-    client = _get_text_client()
-    documents = [text]
-    result: dict = {}
-
-    if analysis_type in ("all", "sentiment"):
-        response = client.analyze_sentiment(documents=documents)[0]
-        if not response.is_error:
-            result["sentiment"] = {
-                "label": response.sentiment,
-                "scores": {
-                    "positive": response.confidence_scores.positive,
-                    "neutral": response.confidence_scores.neutral,
-                    "negative": response.confidence_scores.negative,
-                },
-            }
-
-    if analysis_type in ("all", "keyPhrases"):
-        response = client.extract_key_phrases(documents=documents)[0]
-        if not response.is_error:
-            result["keyPhrases"] = list(response.key_phrases)
-
-    if analysis_type in ("all", "entities"):
-        response = client.recognize_entities(documents=documents)[0]
-        if not response.is_error:
-            result["entities"] = [
-                {
-                    "text": entity.text,
-                    "category": entity.category,
-                    "confidence": entity.confidence_score,
-                }
-                for entity in response.entities
-            ]
-
-    if analysis_type in ("all", "pii"):
-        response = client.recognize_pii_entities(documents=documents)[0]
-        if not response.is_error:
-            result["piiEntities"] = [
-                {"text": entity.text, "category": entity.category}
-                for entity in response.entities
-            ]
-
-    if analysis_type in ("all", "language"):
-        response = client.detect_language(documents=documents)[0]
-        if not response.is_error:
-            result["language"] = {
-                "name": response.primary_language.name,
-                "iso": response.primary_language.iso6391_name,
-                "confidence": response.primary_language.confidence_score,
-            }
-
-    return result
-
-
-def translate_text(text: str, source: str, target: str) -> str:
-    key = settings.AZURE_TRANSLATOR_KEY or settings.AZURE_AI_SERVICES_KEY
-    region = settings.AZURE_TRANSLATOR_REGION or settings.AZURE_SPEECH_REGION
-    if not key:
-        raise RuntimeError(
-            "Azure Translator not configured. "
-            "Set AZURE_TRANSLATOR_KEY or AZURE_AI_SERVICES_KEY."
-        )
-    endpoint = "https://api.cognitive.microsofttranslator.com"
-    path = "/translate"
-    params: dict = {"api-version": "3.0", "to": target}
-    if source and source != "auto":
-        params["from"] = source
-    headers = {
-        "Ocp-Apim-Subscription-Key": key,
-        "Ocp-Apim-Subscription-Region": region,
-        "Content-type": "application/json",
-        "X-ClientTraceId": str(uuid.uuid4()),
-    }
-    body = [{"text": text}]
-    response = httpx.post(
-        f"{endpoint}{path}", params=params, headers=headers, json=body, timeout=30
-    )
-    response.raise_for_status()
-    data = response.json()
-    return data[0]["translations"][0]["text"]
-
-
-def speech_to_text(audio_bytes: bytes) -> str:
     if not settings.AZURE_SPEECH_KEY or not settings.AZURE_SPEECH_REGION:
         raise RuntimeError(
             "Azure Speech not configured. "
@@ -945,8 +674,15 @@ def speech_to_text(audio_bytes: bytes) -> str:
     data = response.json()
     return data.get("DisplayText", "")
 
+    ### YOUR CODE ENDS HERE ###
 
-def text_to_speech(text: str) -> str:
+
+def text_to_speech(text):
+    ### YOUR CODE STARTS HERE ###
+
+    import base64
+    import httpx
+
     if not settings.AZURE_SPEECH_KEY or not settings.AZURE_SPEECH_REGION:
         raise RuntimeError(
             "Azure Speech not configured. "
@@ -973,6 +709,242 @@ def text_to_speech(text: str) -> str:
     response.raise_for_status()
     audio_b64 = base64.b64encode(response.content).decode("utf-8")
     return f"data:audio/mp3;base64,{audio_b64}"
+
+    ### YOUR CODE ENDS HERE ###
+```
+
+</details>
+
+### Exam Tips
+
+- The exam tests both the **Speech SDK** and the **REST API** approaches. The REST API does not require installing native libraries, which is why it is often used in web backends and containers. Know when to use each.
+- SSML is important for the exam. Know the basic structure: `<speak>` root with version and namespace, `<voice>` with a voice name, and text content. The exam may also test SSML features like `<prosody>` (speed/pitch), `<break>` (pauses), and `<phoneme>` (pronunciation).
+- The `X-Microsoft-OutputFormat` header determines audio quality and format. The exam may ask about choosing the right format for different scenarios (streaming vs. file download, bandwidth constraints).
+
+---
+
+## Checkpoint
+
+After completing all four layers, your `language_service.py` should have:
+
+- An `analyze_text()` function that creates a `TextAnalyticsClient` inline and handles sentiment, key phrases, entities, PII, and language detection based on the `analysis_type` parameter
+- A `translate_text()` function that calls the Translator REST API with proper authentication headers
+- A `speech_to_text()` function that sends WAV audio to the Speech STT REST API
+- A `text_to_speech()` function that sends SSML to the Speech TTS REST API and returns a base64 audio data URL
+
+Verify by testing all four endpoints through the frontend (`/language`) and the Swagger UI (`http://localhost:8000/docs`).
+
+<details><summary>Complete language_service.py</summary>
+
+```python
+# Azure Language & Speech services — implement following docs/labs/05-language.md
+# Quickstart: https://learn.microsoft.com/en-us/azure/ai-services/language-service/sentiment-opinion-mining/quickstart
+
+from app.config import settings
+
+
+# === LAYER 1: Sentiment Analysis (Lab 05, Layer 1) ===
+
+### YOUR CODE STARTS HERE ###
+
+# Step 1: Import TextAnalyticsClient and AzureKeyCredential
+from azure.ai.textanalytics import TextAnalyticsClient
+from azure.core.credentials import AzureKeyCredential
+
+### YOUR CODE ENDS HERE ###
+
+
+def analyze_text(text, analysis_type="all"):
+    ### YOUR CODE STARTS HERE ###
+
+    # Step 1: Create the TextAnalyticsClient inline
+    if not settings.AZURE_AI_SERVICES_ENDPOINT or not settings.AZURE_AI_SERVICES_KEY:
+        raise RuntimeError(
+            "Azure AI Services not configured. "
+            "Set AZURE_AI_SERVICES_ENDPOINT and AZURE_AI_SERVICES_KEY."
+        )
+    client = TextAnalyticsClient(
+        endpoint=settings.AZURE_AI_SERVICES_ENDPOINT,
+        credential=AzureKeyCredential(settings.AZURE_AI_SERVICES_KEY),
+    )
+    documents = [text]
+    result = {}
+
+    # Step 2: Based on analysis_type, call the appropriate method:
+    if analysis_type in ("all", "sentiment"):
+        response = client.analyze_sentiment(documents=documents)[0]
+        if not response.is_error:
+            result["sentiment"] = {
+                "label": response.sentiment,
+                "scores": {
+                    "positive": response.confidence_scores.positive,
+                    "neutral": response.confidence_scores.neutral,
+                    "negative": response.confidence_scores.negative,
+                },
+            }
+
+    if analysis_type in ("all", "keyPhrases"):
+        response = client.extract_key_phrases(documents=documents)[0]
+        if not response.is_error:
+            result["keyPhrases"] = list(response.key_phrases)
+
+    if analysis_type in ("all", "entities"):
+        response = client.recognize_entities(documents=documents)[0]
+        if not response.is_error:
+            result["entities"] = [
+                {
+                    "text": entity.text,
+                    "category": entity.category,
+                    "confidence": entity.confidence_score,
+                }
+                for entity in response.entities
+            ]
+
+    if analysis_type in ("all", "pii"):
+        response = client.recognize_pii_entities(documents=documents)[0]
+        if not response.is_error:
+            result["piiEntities"] = [
+                {"text": entity.text, "category": entity.category}
+                for entity in response.entities
+            ]
+
+    if analysis_type in ("all", "language"):
+        response = client.detect_language(documents=documents)[0]
+        if not response.is_error:
+            result["language"] = {
+                "name": response.primary_language.name,
+                "iso": response.primary_language.iso6391_name,
+                "confidence": response.primary_language.confidence_score,
+            }
+
+    # Step 3: Return dict with results
+    return result
+
+    ### YOUR CODE ENDS HERE ###
+
+
+# === LAYER 2: NLP Features (Lab 05, Layer 2) ===
+# No new function — add entities, PII, language detection to Layer 1.
+
+
+# === LAYER 3: Translation (Lab 05, Layer 3) ===
+
+
+def translate_text(text, source, target):
+    ### YOUR CODE STARTS HERE ###
+
+    # Step 1: Import httpx
+    import uuid
+    import httpx
+
+    # Step 2: POST to https://api.cognitive.microsofttranslator.com/translate
+    # Step 3: Pass settings.AZURE_AI_SERVICES_KEY in Ocp-Apim-Subscription-Key header
+    key = settings.AZURE_TRANSLATOR_KEY or settings.AZURE_AI_SERVICES_KEY
+    region = settings.AZURE_TRANSLATOR_REGION or settings.AZURE_SPEECH_REGION
+    if not key:
+        raise RuntimeError(
+            "Azure Translator not configured. "
+            "Set AZURE_TRANSLATOR_KEY or AZURE_AI_SERVICES_KEY."
+        )
+    endpoint = "https://api.cognitive.microsofttranslator.com"
+    path = "/translate"
+    params = {"api-version": "3.0", "to": target}
+    if source and source != "auto":
+        params["from"] = source
+    headers = {
+        "Ocp-Apim-Subscription-Key": key,
+        "Ocp-Apim-Subscription-Region": region,
+        "Content-type": "application/json",
+        "X-ClientTraceId": str(uuid.uuid4()),
+    }
+    body = [{"text": text}]
+    response = httpx.post(
+        f"{endpoint}{path}", params=params, headers=headers, json=body, timeout=30
+    )
+    response.raise_for_status()
+    data = response.json()
+
+    # Step 4: Return the translated text string
+    return data[0]["translations"][0]["text"]
+
+    ### YOUR CODE ENDS HERE ###
+
+
+# === LAYER 4: Speech Services (Lab 05, Layer 4) ===
+
+
+def speech_to_text(audio_bytes):
+    ### YOUR CODE STARTS HERE ###
+
+    # Step 1: Import httpx
+    import httpx
+
+    # Step 2: POST audio/wav to {region}.stt.speech.microsoft.com
+    if not settings.AZURE_SPEECH_KEY or not settings.AZURE_SPEECH_REGION:
+        raise RuntimeError(
+            "Azure Speech not configured. "
+            "Set AZURE_SPEECH_KEY and AZURE_SPEECH_REGION."
+        )
+    url = (
+        f"https://{settings.AZURE_SPEECH_REGION}.stt.speech.microsoft.com"
+        "/speech/recognition/conversation/cognitiveservices/v1"
+    )
+    headers = {
+        "Ocp-Apim-Subscription-Key": settings.AZURE_SPEECH_KEY,
+        "Content-Type": "audio/wav",
+        "Accept": "application/json",
+    }
+    params = {"language": "en-US"}
+    response = httpx.post(
+        url, headers=headers, params=params, content=audio_bytes, timeout=30
+    )
+    response.raise_for_status()
+    data = response.json()
+
+    # Step 3: Return the recognized text string
+    return data.get("DisplayText", "")
+
+    ### YOUR CODE ENDS HERE ###
+
+
+def text_to_speech(text):
+    ### YOUR CODE STARTS HERE ###
+
+    # Step 1: Import httpx, base64
+    import base64
+    import httpx
+
+    # Step 2: POST SSML to {region}.tts.speech.microsoft.com
+    if not settings.AZURE_SPEECH_KEY or not settings.AZURE_SPEECH_REGION:
+        raise RuntimeError(
+            "Azure Speech not configured. "
+            "Set AZURE_SPEECH_KEY and AZURE_SPEECH_REGION."
+        )
+    url = (
+        f"https://{settings.AZURE_SPEECH_REGION}.tts.speech.microsoft.com"
+        "/cognitiveservices/v1"
+    )
+    headers = {
+        "Ocp-Apim-Subscription-Key": settings.AZURE_SPEECH_KEY,
+        "Content-Type": "application/ssml+xml",
+        "X-Microsoft-OutputFormat": "audio-16khz-128kbitrate-mono-mp3",
+    }
+    ssml = (
+        '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">'
+        '<voice name="en-US-JennyNeural">'
+        f"{text}"
+        "</voice></speak>"
+    )
+    response = httpx.post(
+        url, headers=headers, content=ssml.encode("utf-8"), timeout=30
+    )
+    response.raise_for_status()
+    audio_b64 = base64.b64encode(response.content).decode("utf-8")
+
+    # Step 3: Return base64 data URL string (data:audio/mp3;base64,...)
+    return f"data:audio/mp3;base64,{audio_b64}"
+
+    ### YOUR CODE ENDS HERE ###
 ```
 
 </details>

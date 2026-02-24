@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef, isValidElement, type ReactNode } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import rehypeRaw from "rehype-raw"
@@ -687,6 +687,20 @@ function SectionRenderer({
   )
 }
 
+// --- Helpers ---
+
+/** Recursively extract plain text from React children (for content-sniffing blockquotes). */
+function extractTextContent(node: ReactNode): string {
+  if (node == null || typeof node === "boolean") return ""
+  if (typeof node === "string") return node
+  if (typeof node === "number") return String(node)
+  if (Array.isArray(node)) return node.map(extractTextContent).join("")
+  if (isValidElement(node)) {
+    return extractTextContent((node.props as Record<string, unknown>).children as ReactNode)
+  }
+  return ""
+}
+
 // --- Markdown Renderer ---
 
 function MarkdownBlock({ content, completedSet, onToggleStep }: {
@@ -706,7 +720,7 @@ function MarkdownBlock({ content, completedSet, onToggleStep }: {
             if (!id || !completedSet || !onToggleStep) return null
             const checked = completedSet.has(id)
             return (
-              <div className={`my-5 flex items-center gap-2.5 rounded-lg border px-3.5 py-2.5 transition-colors ${
+              <span className={`my-5 flex items-center gap-2.5 rounded-lg border px-3.5 py-2.5 transition-colors ${
                 checked ? "border-primary/30 bg-primary/5" : "border-border bg-muted/20 hover:bg-muted/40"
               }`}>
                 <button
@@ -725,7 +739,7 @@ function MarkdownBlock({ content, completedSet, onToggleStep }: {
                     {checked ? "Done!" : "Mark this step as done"}
                   </span>
                 </button>
-              </div>
+              </span>
             )
           },
           // Headings — use em for relative sizing, generous spacing for clear separation
@@ -736,7 +750,7 @@ function MarkdownBlock({ content, completedSet, onToggleStep }: {
             <h3 className="text-[1.12em] font-semibold text-foreground mt-8 mb-3 first:mt-0">{children}</h3>
           ),
           h3: ({ children }) => (
-            <h4 className="text-[1.05em] font-semibold text-foreground mt-6 mb-2.5 first:mt-0">{children}</h4>
+            <h4 className="text-[1.05em] font-semibold text-foreground mt-8 mb-3 first:mt-0 border-l-[3px] border-primary/40 pl-3 py-1 bg-muted/20 rounded-r-md">{children}</h4>
           ),
           h4: ({ children }) => (
             <h5 className="text-[1em] font-medium text-foreground mt-5 mb-2 first:mt-0">{children}</h5>
@@ -814,15 +828,36 @@ function MarkdownBlock({ content, completedSet, onToggleStep }: {
           ),
           li: ({ children }) => <li className="pl-1">{children}</li>,
 
-          // Blockquotes — styled as callout cards
-          blockquote: ({ children }) => (
-            <div className="my-5 rounded-lg border border-border/60 bg-muted/30 px-4 py-3.5 text-[0.92em] text-muted-foreground">
-              {children}
-            </div>
-          ),
+          // Blockquotes — smart styling based on first bold prefix
+          blockquote: ({ children }) => {
+            const text = extractTextContent(children).trim().toLowerCase()
+
+            if (text.startsWith("what you will learn") || text.startsWith("what you'll learn")) {
+              return (
+                <div className="my-5 rounded-lg border border-primary/20 border-l-[3px] border-l-primary/50 bg-primary/[0.06] px-4 py-3.5 text-[0.92em] text-foreground/70">
+                  {children}
+                </div>
+              )
+            }
+
+            if (text.startsWith("exam tip")) {
+              return (
+                <div className="my-5 rounded-lg border border-amber-500/20 border-l-[3px] border-l-amber-500/50 bg-amber-500/[0.06] px-4 py-3.5 text-[0.92em] text-foreground/70">
+                  {children}
+                </div>
+              )
+            }
+
+            // Default style for Note / Important / Warning / generic blockquotes
+            return (
+              <div className="my-5 rounded-lg border border-border/60 bg-muted/30 px-4 py-3.5 text-[0.92em] text-muted-foreground">
+                {children}
+              </div>
+            )
+          },
 
           // Horizontal rules
-          hr: () => <hr className="my-8 border-border/40" />,
+          hr: () => <hr className="my-10 border-border/40" />,
 
           // Strong
           strong: ({ children }) => (

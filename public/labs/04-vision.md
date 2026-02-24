@@ -68,8 +68,7 @@ The frontend Vision Lab page (`/vision`) is already built. The backend router (`
 ## Layer 1: Image Analysis
 
 - Add SDK imports to `vision_service.py`
-- Implement `_get_client()` helper
-- Implement `analyze_image()` with description and tags
+- Implement `analyze_image()` with inline client creation, description and tags
 - Test via frontend or Swagger UI
 
 ### What You Will Learn
@@ -95,12 +94,8 @@ The response object has nested attributes — `analysis.description.captions` is
 
 <checkpoint id="l1-imports"></checkpoint>
 
-3. Write a helper function `_get_client()` that creates and returns a `ComputerVisionClient`. It should check that the endpoint and key are configured (raise `RuntimeError` if not).
-
-<checkpoint id="l1-get-client"></checkpoint>
-
-4. Implement `analyze_image()`:
-   - Call `_get_client()` to get the client.
+3. Implement `analyze_image()`:
+   - Create a `ComputerVisionClient` inline (check that the endpoint and key are configured; raise `RuntimeError` if not).
    - Wrap `image_bytes` in an `io.BytesIO` stream.
    - Call `client.analyze_image_in_stream()` with the stream and `visual_features=[VisualFeatureTypes.description, VisualFeatureTypes.tags]`.
    - Build and return a dict with keys `"caption"` (first caption text), `"description"` (joined description tags), and `"tags"` (list of tag names where confidence > 0.5).
@@ -115,13 +110,11 @@ from azure.cognitiveservices.vision.computervision import ComputerVisionClient
 from azure.cognitiveservices.vision.computervision.models import VisualFeatureTypes
 from msrest.authentication import CognitiveServicesCredentials
 
-def _get_client() -> ComputerVisionClient:
-    # Check settings.AZURE_AI_SERVICES_ENDPOINT and settings.AZURE_AI_SERVICES_KEY
-    # Return ComputerVisionClient(endpoint, CognitiveServicesCredentials(key))
-    ...
-
-def analyze_image(image_bytes: bytes) -> dict:
-    client = _get_client()
+def analyze_image(image_bytes):
+    client = ComputerVisionClient(
+        ___,
+        CognitiveServicesCredentials(___),
+    )
     stream = io.BytesIO(image_bytes)
     analysis = client.analyze_image_in_stream(
         stream,
@@ -149,32 +142,32 @@ def analyze_image(image_bytes: bytes) -> dict:
 <details><summary>Full Solution</summary>
 
 ```python
-import io
-import logging
+from app.config import settings
 
+# === LAYER 1: Image Analysis (Lab 04, Layer 1) ===
+
+### YOUR CODE STARTS HERE ###
+
+import io
 from azure.cognitiveservices.vision.computervision import ComputerVisionClient
 from azure.cognitiveservices.vision.computervision.models import VisualFeatureTypes
 from msrest.authentication import CognitiveServicesCredentials
 
-from app.config import settings
-
-logger = logging.getLogger(__name__)
+### YOUR CODE ENDS HERE ###
 
 
-def _get_client() -> ComputerVisionClient:
+def analyze_image(image_bytes):
+    ### YOUR CODE STARTS HERE ###
+
     if not settings.AZURE_AI_SERVICES_ENDPOINT or not settings.AZURE_AI_SERVICES_KEY:
         raise RuntimeError(
             "Azure AI Services not configured. "
             "Set AZURE_AI_SERVICES_ENDPOINT and AZURE_AI_SERVICES_KEY."
         )
-    return ComputerVisionClient(
+    client = ComputerVisionClient(
         settings.AZURE_AI_SERVICES_ENDPOINT,
         CognitiveServicesCredentials(settings.AZURE_AI_SERVICES_KEY),
     )
-
-
-def analyze_image(image_bytes: bytes) -> dict:
-    client = _get_client()
     stream = io.BytesIO(image_bytes)
     analysis = client.analyze_image_in_stream(
         stream,
@@ -192,6 +185,8 @@ def analyze_image(image_bytes: bytes) -> dict:
     if analysis.tags:
         result["tags"] = [tag.name for tag in analysis.tags if tag.confidence > 0.5]
     return result
+
+    ### YOUR CODE ENDS HERE ###
 ```
 
 </details>
@@ -280,8 +275,18 @@ if analysis.objects:
 <details><summary>Full Solution</summary>
 
 ```python
-def analyze_image(image_bytes: bytes) -> dict:
-    client = _get_client()
+def analyze_image(image_bytes):
+    ### YOUR CODE STARTS HERE ###
+
+    if not settings.AZURE_AI_SERVICES_ENDPOINT or not settings.AZURE_AI_SERVICES_KEY:
+        raise RuntimeError(
+            "Azure AI Services not configured. "
+            "Set AZURE_AI_SERVICES_ENDPOINT and AZURE_AI_SERVICES_KEY."
+        )
+    client = ComputerVisionClient(
+        settings.AZURE_AI_SERVICES_ENDPOINT,
+        CognitiveServicesCredentials(settings.AZURE_AI_SERVICES_KEY),
+    )
     stream = io.BytesIO(image_bytes)
     analysis = client.analyze_image_in_stream(
         stream,
@@ -314,6 +319,8 @@ def analyze_image(image_bytes: bytes) -> dict:
             for obj in analysis.objects
         ]
     return result
+
+    ### YOUR CODE ENDS HERE ###
 ```
 
 </details>
@@ -369,8 +376,11 @@ You must pass `raw=True` to `read_in_stream()` to get access to the raw HTTP res
 ```python
 import time
 
-def ocr_image(image_bytes: bytes) -> dict:
-    client = _get_client()
+def ocr_image(image_bytes):
+    client = ComputerVisionClient(
+        ___,
+        CognitiveServicesCredentials(___),
+    )
     stream = io.BytesIO(image_bytes)
 
     # Submit the read operation
@@ -408,33 +418,33 @@ def ocr_image(image_bytes: bytes) -> dict:
 <details><summary>Full Solution</summary>
 
 ```python
+from app.config import settings
+
+# === LAYER 1: Image Analysis (Lab 04, Layer 1) ===
+
+### YOUR CODE STARTS HERE ###
+
 import io
 import time
-import logging
-
 from azure.cognitiveservices.vision.computervision import ComputerVisionClient
 from azure.cognitiveservices.vision.computervision.models import VisualFeatureTypes
 from msrest.authentication import CognitiveServicesCredentials
 
-from app.config import settings
-
-logger = logging.getLogger(__name__)
+### YOUR CODE ENDS HERE ###
 
 
-def _get_client() -> ComputerVisionClient:
+def analyze_image(image_bytes):
+    ### YOUR CODE STARTS HERE ###
+
     if not settings.AZURE_AI_SERVICES_ENDPOINT or not settings.AZURE_AI_SERVICES_KEY:
         raise RuntimeError(
             "Azure AI Services not configured. "
             "Set AZURE_AI_SERVICES_ENDPOINT and AZURE_AI_SERVICES_KEY."
         )
-    return ComputerVisionClient(
+    client = ComputerVisionClient(
         settings.AZURE_AI_SERVICES_ENDPOINT,
         CognitiveServicesCredentials(settings.AZURE_AI_SERVICES_KEY),
     )
-
-
-def analyze_image(image_bytes: bytes) -> dict:
-    client = _get_client()
     stream = io.BytesIO(image_bytes)
     analysis = client.analyze_image_in_stream(
         stream,
@@ -468,9 +478,28 @@ def analyze_image(image_bytes: bytes) -> dict:
         ]
     return result
 
+    ### YOUR CODE ENDS HERE ###
 
-def ocr_image(image_bytes: bytes) -> dict:
-    client = _get_client()
+
+# === LAYER 2: Object Detection (Lab 04, Layer 2) ===
+# No new function — add VisualFeatureTypes.objects to your Layer 1 implementation.
+
+
+# === LAYER 3: OCR with the Read API (Lab 04, Layer 3) ===
+
+
+def ocr_image(image_bytes):
+    ### YOUR CODE STARTS HERE ###
+
+    if not settings.AZURE_AI_SERVICES_ENDPOINT or not settings.AZURE_AI_SERVICES_KEY:
+        raise RuntimeError(
+            "Azure AI Services not configured. "
+            "Set AZURE_AI_SERVICES_ENDPOINT and AZURE_AI_SERVICES_KEY."
+        )
+    client = ComputerVisionClient(
+        settings.AZURE_AI_SERVICES_ENDPOINT,
+        CognitiveServicesCredentials(settings.AZURE_AI_SERVICES_KEY),
+    )
     stream = io.BytesIO(image_bytes)
     read_response = client.read_in_stream(stream, raw=True)
     operation_location = read_response.headers["Operation-Location"]
@@ -488,6 +517,8 @@ def ocr_image(image_bytes: bytes) -> dict:
             for line in page.lines:
                 lines.append(line.text)
     return {"text": lines}
+
+    ### YOUR CODE ENDS HERE ###
 ```
 
 </details>
@@ -504,42 +535,45 @@ def ocr_image(image_bytes: bytes) -> dict:
 
 After completing all three layers, your `vision_service.py` should have:
 
-- A `_get_client()` helper that creates an authenticated `ComputerVisionClient`
-- An `analyze_image()` function that returns captions, description tags, confidence-scored tags, and detected objects with bounding boxes
-- An `ocr_image()` function that uses the async Read API with polling to extract text lines
+- An `analyze_image()` function that creates a `ComputerVisionClient` inline and returns captions, description tags, confidence-scored tags, and detected objects with bounding boxes
+- An `ocr_image()` function that creates a `ComputerVisionClient` inline and uses the async Read API with polling to extract text lines
 
 Verify by testing both endpoints through the frontend (`/vision`) and the Swagger UI (`http://localhost:8000/docs`).
 
 <details><summary>Complete vision_service.py</summary>
 
 ```python
-import io
-import logging
-import time
+# Azure Computer Vision service — implement following docs/labs/04-vision.md
+# Quickstart: https://learn.microsoft.com/en-us/azure/ai-services/computer-vision/quickstarts-sdk/image-analysis-client-library
 
+from app.config import settings
+
+
+# === LAYER 1: Image Analysis (Lab 04, Layer 1) ===
+
+### YOUR CODE STARTS HERE ###
+
+import io
+import time
 from azure.cognitiveservices.vision.computervision import ComputerVisionClient
 from azure.cognitiveservices.vision.computervision.models import VisualFeatureTypes
 from msrest.authentication import CognitiveServicesCredentials
 
-from app.config import settings
-
-logger = logging.getLogger(__name__)
+### YOUR CODE ENDS HERE ###
 
 
-def _get_client() -> ComputerVisionClient:
+def analyze_image(image_bytes):
+    ### YOUR CODE STARTS HERE ###
+
     if not settings.AZURE_AI_SERVICES_ENDPOINT or not settings.AZURE_AI_SERVICES_KEY:
         raise RuntimeError(
             "Azure AI Services not configured. "
             "Set AZURE_AI_SERVICES_ENDPOINT and AZURE_AI_SERVICES_KEY."
         )
-    return ComputerVisionClient(
+    client = ComputerVisionClient(
         settings.AZURE_AI_SERVICES_ENDPOINT,
         CognitiveServicesCredentials(settings.AZURE_AI_SERVICES_KEY),
     )
-
-
-def analyze_image(image_bytes: bytes) -> dict:
-    client = _get_client()
     stream = io.BytesIO(image_bytes)
     analysis = client.analyze_image_in_stream(
         stream,
@@ -549,16 +583,14 @@ def analyze_image(image_bytes: bytes) -> dict:
             VisualFeatureTypes.objects,
         ],
     )
-    result: dict = {}
+    result = {}
     if analysis.description:
         if analysis.description.captions:
             result["caption"] = analysis.description.captions[0].text
         if analysis.description.tags:
             result["description"] = ", ".join(analysis.description.tags)
     if analysis.tags:
-        result["tags"] = [
-            tag.name for tag in analysis.tags if tag.confidence > 0.5
-        ]
+        result["tags"] = [tag.name for tag in analysis.tags if tag.confidence > 0.5]
     if analysis.objects:
         result["objects"] = [
             {
@@ -575,24 +607,47 @@ def analyze_image(image_bytes: bytes) -> dict:
         ]
     return result
 
+    ### YOUR CODE ENDS HERE ###
 
-def ocr_image(image_bytes: bytes) -> dict:
-    client = _get_client()
+
+# === LAYER 2: Object Detection (Lab 04, Layer 2) ===
+# No new function — add VisualFeatureTypes.objects to your Layer 1 implementation.
+
+
+# === LAYER 3: OCR with the Read API (Lab 04, Layer 3) ===
+
+
+def ocr_image(image_bytes):
+    ### YOUR CODE STARTS HERE ###
+
+    if not settings.AZURE_AI_SERVICES_ENDPOINT or not settings.AZURE_AI_SERVICES_KEY:
+        raise RuntimeError(
+            "Azure AI Services not configured. "
+            "Set AZURE_AI_SERVICES_ENDPOINT and AZURE_AI_SERVICES_KEY."
+        )
+    client = ComputerVisionClient(
+        settings.AZURE_AI_SERVICES_ENDPOINT,
+        CognitiveServicesCredentials(settings.AZURE_AI_SERVICES_KEY),
+    )
     stream = io.BytesIO(image_bytes)
     read_response = client.read_in_stream(stream, raw=True)
     operation_location = read_response.headers["Operation-Location"]
     operation_id = operation_location.split("/")[-1]
+
     for _ in range(30):
         read_result = client.get_read_result(operation_id)
         if read_result.status.lower() not in ("notstarted", "running"):
             break
         time.sleep(1)
-    lines: list[str] = []
+
+    lines = []
     if read_result.analyze_result and read_result.analyze_result.read_results:
         for page in read_result.analyze_result.read_results:
             for line in page.lines:
                 lines.append(line.text)
     return {"text": lines}
+
+    ### YOUR CODE ENDS HERE ###
 ```
 
 </details>

@@ -1,12 +1,11 @@
 """Mock data for demo mode — realistic responses without Azure API calls.
 
-When DEMO_MODE=true in .env, service functions return these mocks instead of
-calling Azure. This lets students explore the app UI and understand the
-expected response shapes before setting up Azure resources.
+When DEMO_MODE=true in .env, main.py patches service modules to point at
+these mocks instead of the real functions. This lets students explore the
+app UI and understand expected response shapes before setting up Azure.
 """
 
-
-def mock_chat_completion() -> str:
+def mock_chat_completion():
     return (
         "This is a demo response from GPT. In production, this would be a "
         "real Azure OpenAI chat completion. The model would consider your "
@@ -15,11 +14,11 @@ def mock_chat_completion() -> str:
     )
 
 
-def mock_generate_image() -> str:
+def mock_generate_image():
     return "https://placehold.co/1024x1024/2563eb/ffffff?text=DALL-E+Demo+Image"
 
 
-def mock_chat_with_tools() -> dict:
+def mock_chat_with_tools():
     return {
         "message": (
             "This is a demo agent response. In production, the agent would "
@@ -36,7 +35,7 @@ def mock_chat_with_tools() -> dict:
     }
 
 
-def mock_analyze_image() -> dict:
+def mock_analyze_image():
     return {
         "caption": "A sample image showing a city skyline at sunset",
         "description": "city, skyline, sunset, buildings, clouds, urban",
@@ -56,7 +55,7 @@ def mock_analyze_image() -> dict:
     }
 
 
-def mock_ocr_image() -> dict:
+def mock_ocr_image():
     return {
         "text": [
             "DEMO OCR OUTPUT",
@@ -68,7 +67,7 @@ def mock_ocr_image() -> dict:
     }
 
 
-def mock_analyze_text() -> dict:
+def mock_analyze_text():
     return {
         "sentiment": {
             "label": "positive",
@@ -86,23 +85,23 @@ def mock_analyze_text() -> dict:
     }
 
 
-def mock_translate_text() -> str:
+def mock_translate_text():
     return "[Demo] Translated text would appear here."
 
 
-def mock_speech_to_text() -> str:
+def mock_speech_to_text():
     return "This is a demo transcription of the audio you uploaded."
 
 
-def mock_text_to_speech() -> str:
+def mock_text_to_speech():
     return "data:audio/mp3;base64,DEMO_AUDIO_DATA"
 
 
-def mock_upload_document() -> None:
+def mock_upload_document():
     return None
 
 
-def mock_search_documents() -> list[dict]:
+def mock_search_documents():
     return [
         {
             "content": (
@@ -133,7 +132,7 @@ def mock_search_documents() -> list[dict]:
     ]
 
 
-def mock_safety_analyze_text() -> dict:
+def mock_safety_analyze_text():
     return {
         "categories": [
             {"name": "Hate", "severity": 0, "label": "Safe"},
@@ -144,11 +143,11 @@ def mock_safety_analyze_text() -> dict:
     }
 
 
-def mock_check_prompt() -> dict:
+def mock_check_prompt():
     return {"flagged": False}
 
 
-def mock_analyze_document(model_id: str = "prebuilt-invoice") -> dict:
+def mock_analyze_document(model_id="prebuilt-invoice"):
     return {
         "model_id": model_id,
         "pages": [{"page_number": 1, "width": 8.5, "height": 11, "unit": "inch"}],

@@ -1,33 +1,26 @@
-"""Azure Document Intelligence service — stub for guided lab implementation.
-
-Students implement this file following the pattern of other services.
-The router (documents.py) calls these functions — signatures must not change.
-"""
-
-import logging
+# Azure Document Intelligence service — implement following the lab guide
+# Quickstart: https://learn.microsoft.com/en-us/azure/ai-services/document-intelligence/quickstarts/get-started-sdks-rest-api
 
 from app.config import settings
 
-logger = logging.getLogger(__name__)
-
-
 # === LAYER 1: Prebuilt Invoice Model ===
-# TODO: Create a DocumentAnalysisClient and call begin_analyze_document
-# SDK: azure-ai-formrecognizer
-# Docs: https://learn.microsoft.com/en-us/azure/ai-services/document-intelligence/quickstarts/get-started-sdks-rest-api
+
+### YOUR CODE STARTS HERE ###
+
+# Step 1: Import DocumentAnalysisClient and AzureKeyCredential
+
+### YOUR CODE ENDS HERE ###
 
 
-def analyze_document(document_bytes: bytes, model_id: str = "prebuilt-invoice") -> dict:
-    """Analyze a document using a prebuilt or custom model.
+def analyze_document(document_bytes, model_id="prebuilt-invoice"):
+    ### YOUR CODE STARTS HERE ###
 
-    Called by: documents.router /api/documents/analyze
-    Returns: Dict with keys like "fields", "tables", "pages".
-    """
-    if settings.DEMO_MODE:
-        from app.services.mock_data import mock_analyze_document
+    # Step 1: Create a DocumentAnalysisClient using settings.AZURE_AI_SERVICES_ENDPOINT
+    #         and settings.AZURE_AI_SERVICES_KEY
+    # Step 2: Call client.begin_analyze_document(model_id, document_bytes)
+    # Step 3: Get the result with .result()
+    # Step 4: Return dict with "fields", "tables", "pages"
 
-        return mock_analyze_document(model_id)
-    raise NotImplementedError(
-        "See docs for Document Intelligence implementation. "
-        "Hint: from azure.ai.formrecognizer import DocumentAnalysisClient"
-    )
+    ### YOUR CODE ENDS HERE ###
+
+    raise NotImplementedError("See docs for Document Intelligence implementation")
